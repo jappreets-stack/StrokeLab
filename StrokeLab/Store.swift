@@ -16,6 +16,7 @@ final class Store {
         } else {
             data = AppData(version: 2, plans: Self.draftPlans(), pins: (1...18).map { GreenPins(hole: $0) })
         }
+        save()  // persist any migration right away
     }
 
     private func save() {
