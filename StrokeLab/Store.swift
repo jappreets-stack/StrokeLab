@@ -10,10 +10,11 @@ final class Store {
 
     init() {
         if let raw = try? Data(contentsOf: Self.fileURL),
-           let saved = try? JSONDecoder.app.decode(AppData.self, from: raw) {
+           var saved = try? JSONDecoder.app.decode(AppData.self, from: raw) {
+            Self.migrate(&saved)
             data = saved
         } else {
-            data = AppData(plans: Self.draftPlans(), pins: (1...18).map { GreenPins(hole: $0) })
+            data = AppData(version: 2, plans: Self.draftPlans(), pins: (1...18).map { GreenPins(hole: $0) })
         }
     }
 
@@ -87,6 +88,23 @@ final class Store {
 
     // MARK: Draft hole plans (edit them in the Course tab)
 
+    static let driverMinYards = 350
+    static let driverPar5Note = "Driver (210–240) → lay up to a full-wedge number → center of green → two putts."
+    static let driverPar4Note = "Driver (210–240) away from the trouble, then a short iron or wedge to the center."
+
+    /// v1 → v2: driver off the tee on par 5s and par 4s of 350+ yds, unless you already changed the club.
+    private static func migrate(_ d: inout AppData) {
+        guard d.version < 2 else { return }
+        for i in d.plans.indices {
+            let h = Course.hole(d.plans[i].hole)
+            let long = h.par == 5 || (h.par == 4 && h.yards >= driverMinYards)
+            guard long, d.plans[i].teeClub == .hybrid3 else { continue }
+            d.plans[i].teeClub = .driver
+            d.plans[i].note = h.par == 5 ? driverPar5Note : driverPar4Note
+        }
+        d.version = 2
+    }
+
     static func draftPlans() -> [HolePlan] {
         // Par-3 clubs by yardage; everything else: 3-hybrid off the tee.
         let par3Club: [Int: Club] = [2: .i6, 6: .pw, 9: .i7, 11: .hybrid3, 14: .i6, 16: .pw]
@@ -99,13 +117,13 @@ final class Store {
                                 note: short ? "Center of green, not the flag. Par chance." :
                                               "Center of green. Short and on is fine — bogey is a good score.")
             case 5:
-                return HolePlan(hole: h.number, teeClub: .hybrid3, target: 6,
-                                note: "Hybrid → lay up to a full-wedge number → center of green → two putts.")
+                return HolePlan(hole: h.number, teeClub: .driver, target: 6, note: driverPar5Note)
             default:
-                let long = h.yards > 370
+                if h.yards >= Self.driverMinYards {
+                    return HolePlan(hole: h.number, teeClub: .driver, target: 5, note: driverPar4Note)
+                }
                 return HolePlan(hole: h.number, teeClub: .hybrid3, target: 5,
-                                note: long ? "Hybrid, hybrid/iron short of trouble, wedge on. Bogey is the plan."
-                                           : "Hybrid in play, then center of green. Par chance if the tee shot is good.")
+                                note: "Short hole: hybrid in play, then a wedge to the center. Par chance.")
             }
         }
     }
