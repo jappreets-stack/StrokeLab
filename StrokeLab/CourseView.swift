@@ -41,6 +41,7 @@ struct CourseView: View {
 struct HolePlanEditor: View {
     let hole: Int
     @Environment(Store.self) private var store
+    @State private var showMap = false
 
     var body: some View {
         @Bindable var store = store
@@ -69,6 +70,9 @@ struct HolePlanEditor: View {
                 Stepper("Target score: \(plan.wrappedValue.target)", value: plan.target, in: h.par - 1...h.par + 3)
                 TextField("Note to self", text: plan.note, axis: .vertical).lineLimit(2...5)
             }
+            Section("Map") {
+                Button("View hole map", systemImage: "map") { showMap = true }
+            }
             Section("Green") {
                 NavigationLink {
                     PinMapView(hole: hole)
@@ -80,5 +84,6 @@ struct HolePlanEditor: View {
         }
         .navigationTitle("Hole \(hole) · Par \(h.par) · \(h.yards) yds")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showMap) { HoleMapView(hole: hole) }
     }
 }

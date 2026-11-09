@@ -85,6 +85,7 @@ private struct HoleForm: View {
     let holeIndex: Int
     @Environment(Store.self) private var store
     @Environment(LocationModel.self) private var location
+    @State private var showMap = false
 
     var body: some View {
         @Bindable var store = store
@@ -97,6 +98,8 @@ private struct HoleForm: View {
             VStack(alignment: .leading, spacing: 18) {
                 header(hole)
                 YardageStrip(pins: store.pins(hole.number))
+                    .contentShape(.rect)
+                    .onTapGesture { showMap = true }
                 PlanCard(plan: plan)
 
                 ChoiceRow(label: "Score", options: Array(max(1, hole.par - 1)...(hole.par + 6)),
@@ -130,6 +133,7 @@ private struct HoleForm: View {
             .padding()
             .padding(.bottom, 20)
         }
+        .fullScreenCover(isPresented: $showMap) { HoleMapView(hole: hole.number) }
     }
 
     private func header(_ hole: Hole) -> some View {
@@ -138,6 +142,13 @@ private struct HoleForm: View {
             Text("\(hole.yards) yds").font(.title2.weight(.semibold))
             Spacer()
             Pill(text: "SI \(hole.strokeIndex)")
+            Button { showMap = true } label: {
+                Image(systemName: "map.fill").font(.title3.bold())
+                    .frame(width: 48, height: 40)
+                    .background(Color.fairway, in: .rect(cornerRadius: 10))
+                    .foregroundStyle(.white)
+            }
+            .accessibilityLabel("Hole map")
         }
     }
 }
