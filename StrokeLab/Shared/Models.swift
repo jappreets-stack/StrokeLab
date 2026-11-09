@@ -1,0 +1,142 @@
+import Foundation
+
+// MARK: - Small vocab types
+
+nonisolated enum Club: String, Codable, CaseIterable, Identifiable, Sendable {
+    case driver = "Driver", hybrid3 = "3H", i5 = "5i", i6 = "6i", i7 = "7i", i8 = "8i", i9 = "9i"
+    case pw = "PW", aw = "AW", gw = "GW", w56 = "56", w60 = "60"
+    var id: String { rawValue }
+    static let wedges: [Club] = [.pw, .aw, .gw, .w56, .w60]
+}
+
+nonisolated enum TeeResult: String, Codable, CaseIterable, Sendable {
+    case left = "Left", fairway = "Fairway", green = "Green", right = "Right", short = "Short", long = "Long"
+    static func options(par: Int) -> [TeeResult] {
+        par == 3 ? [.left, .green, .right, .short, .long] : [.left, .fairway, .right, .short]
+    }
+}
+
+nonisolated enum TroubleSide: String, Codable, CaseIterable, Sendable {
+    case none = "None", left = "Left", right = "Right", both = "Both sides", short = "Short", long = "Long"
+}
+
+nonisolated enum Hazard: String, Codable, CaseIterable, Sendable {
+    case ob = "OB", water = "Water", trees = "Trees", bunker = "Bunker"
+}
+
+nonisolated enum WarmUp: String, Codable, Sendable {
+    case none = "No warm-up", routine = "5-min routine", full = "Full warm-up"
+}
+
+nonisolated enum RoundType: String, Codable, CaseIterable, Sendable {
+    case front = "Front 9", back = "Back 9", full = "18 holes"
+    var holeNumbers: [Int] {
+        switch self {
+        case .front: Array(1...9)
+        case .back: Array(10...18)
+        case .full: Array(1...18)
+        }
+    }
+}
+
+nonisolated enum UpDown: String, Codable, Sendable {
+    case notAttempted, missed, made
+}
+
+// MARK: - Plans and pins
+
+nonisolated struct HolePlan: Codable, Sendable, Equatable {
+    var hole: Int
+    var troubleSide: TroubleSide = .none
+    var hazards: [Hazard] = []
+    var teeClub: Club = .hybrid3
+    var target: Int
+    var note: String = ""
+
+    var troubleText: String {
+        if troubleSide == .none && hazards.isEmpty { return "No trouble set" }
+        let what = hazards.isEmpty ? "Trouble" : hazards.map(\.rawValue).joined(separator: " + ")
+        return troubleSide == .none ? what : "\(what) \(troubleSide.rawValue.lowercased())"
+    }
+}
+
+nonisolated struct Coordinate: Codable, Sendable, Equatable {
+    var lat: Double
+    var lon: Double
+}
+
+nonisolated struct GreenPins: Codable, Sendable, Equatable {
+    var hole: Int
+    var front: Coordinate?
+    var center: Coordinate?
+    var back: Coordinate?
+    var isComplete: Bool { front != nil && center != nil && back != nil }
+}
+
+// MARK: - Rounds
+
+nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
+    var hole: Int
+    var score: Int?
+    var putts: Int?
+    var teeClub: Club?
+    var teeResult: TeeResult?
+    var greenOverride: Bool?        // nil = work it out from score and putts
+    var penalties: Int = 0
+    var lostBall: Bool = false
+    var upDownOverride: UpDown?     // nil = work it out
+    var id: Int { hole }
+
+    var par: Int { Course.hole(hole).par }
+    var isEntered: Bool { score != nil }
+
+    /// Green in regulation: on the green with two putts' worth of par left.
+    var autoGreen: Bool? {
+        guard let score, let putts else { return nil }
+        return score - putts <= par - 2
+    }
+    var greenHit: Bool? { greenOverride ?? autoGreen }
+
+    /// Missed the green → an up-and-down chance; made = still made par or better.
+    var autoUpDown: UpDown {
+        guard let score, let green = greenHit else { return .notAttempted }
+        if green { return .notAttempted }
+        return score <= par ? .made : .missed
+    }
+    var upDown: UpDown { upDownOverride ?? autoUpDown }
+}
+
+nonisolated struct Round: Codable, Sendable, Identifiable, Equatable {
+    var id = UUID()
+    var date = Date()
+    var type: RoundType
+    var warmUp: WarmUp?
+    var scoresOnly = false
+    var finished = false
+    var holes: [HoleScore]
+
+    init(type: RoundType, date: Date = Date(), scoresOnly: Bool = false) {
+        self.type = type
+        self.date = date
+        self.scoresOnly = scoresOnly
+        self.holes = type.holeNumbers.map { HoleScore(hole: $0) }
+    }
+
+    var entered: [HoleScore] { holes.filter(\.isEntered) }
+    var total: Int { entered.compactMap(\.score).reduce(0, +) }
+    var parPlayed: Int { entered.map(\.par).reduce(0, +) }
+    var toPar: Int { total - parPlayed }
+    var putts: Int { entered.compactMap(\.putts).reduce(0, +) }
+    var isComplete: Bool { entered.count == holes.count }
+}
+
+/// Everything the app saves, in one file.
+nonisolated struct AppData: Codable, Sendable {
+    var version = 1
+    var plans: [HolePlan]
+    var pins: [GreenPins]
+    var rounds: [Round] = []
+    var currentRoundID: UUID?
+}
+
+func toParText(_ n: Int) -> String { n == 0 ? "E" : (n > 0 ? "+\(n)" : "\(n)") }

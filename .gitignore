@@ -1,0 +1,11 @@
+# Xcode per-user and build files
+xcuserdata/
+DerivedData/
+build/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# Personal notes
+CLAUDE.md
