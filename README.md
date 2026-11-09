@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="128" alt="StrokeLab icon" align="right">
+
 # StrokeLab
 
 A private golf stats app for iPhone (Apple Watch coming next), built in SwiftUI for one golfer and one home course.
