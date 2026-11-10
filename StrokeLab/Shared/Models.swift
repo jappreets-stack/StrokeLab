@@ -96,6 +96,7 @@ nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
     var upDownOverride: UpDown?     // nil = work it out
     var firstPutt: PuttLength?      // length of the first putt
     var firstPuttResult: PuttResult? // how the first putt finished
+    var prefilled: Bool?            // true until you change anything on this hole
     var id: Int { hole }
 
     var par: Int { Course.hole(hole).par }

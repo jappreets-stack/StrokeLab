@@ -40,8 +40,10 @@ struct HoleEntryView: View {
             }
             .onAppear {
                 index = round.holes.firstIndex { !$0.isEntered } ?? 0
+                prefill(ri, index)
                 location.start()
             }
+            .onChange(of: index) { _, i in prefill(ri, i) }
             .onDisappear { location.stop() }
             .confirmationDialog("Finish this round?", isPresented: $confirmFinish, titleVisibility: .visible) {
                 Button("Finish round") {
@@ -57,6 +59,19 @@ struct HoleEntryView: View {
         } else {
             Text("Round not found").onAppear { dismiss() }
         }
+    }
+
+    /// When you arrive on a hole: score = your target, 2 putts, tee shot in the fairway (green on par 3s).
+    /// Most holes then need a tap or two to correct, or none.
+    private func prefill(_ ri: Int, _ hi: Int) {
+        guard store.data.rounds.indices.contains(ri), store.data.rounds[ri].holes.indices.contains(hi) else { return }
+        var h = store.data.rounds[ri].holes[hi]
+        guard h.score == nil, !store.data.rounds[ri].scoresOnly else { return }
+        h.score = store.plan(h.hole).target
+        h.putts = 2
+        h.teeResult = h.par == 3 ? .green : .fairway
+        h.prefilled = true
+        store.data.rounds[ri].holes[hi] = h
     }
 
     private func bottomBar(_ round: Round) -> some View {
@@ -86,6 +101,15 @@ private struct HoleForm: View {
     @Environment(Store.self) private var store
     @Environment(LocationModel.self) private var location
     @State private var showMap = false
+    @State private var showMore = false
+
+    private func moreSummary(_ e: HoleScore, _ plan: HolePlan) -> String {
+        var parts = ["\(e.teeClub?.rawValue ?? plan.teeClub.rawValue) off the tee"]
+        parts.append(e.penalties == 0 ? "no penalties" : "\(e.penalties) penalty")
+        if e.lostBall { parts.append("lost ball") }
+        if let r = e.firstPuttResult { parts.append("first putt \(r.rawValue.lowercased())") }
+        return parts.joined(separator: " · ") + " — tap for penalties, lost ball, putts"
+    }
 
     var body: some View {
         @Bindable var store = store
@@ -102,46 +126,72 @@ private struct HoleForm: View {
                     .onTapGesture { showMap = true }
                 PlanCard(plan: plan)
 
+                if entry.prefilled == true {
+                    Label("Pre-filled with your target, 2 putts, \(hole.par == 3 ? "green" : "fairway"). Tap anything that was different.",
+                          systemImage: "wand.and.stars")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 ChoiceRow(label: "Score", options: Array(max(1, hole.par - 1)...(hole.par + 6)),
                           title: { "\($0)" }, value: s.score, columns: 4, height: 60)
                 ChoiceRow(label: "Putts", options: [0, 1, 2, 3, 4], title: { "\($0)" },
                           value: s.putts, columns: 5)
-                if (entry.putts ?? 0) > 0 {
-                    ChoiceRow(label: "First putt length", hint: "(feet)", options: PuttLength.allCases, title: \.rawValue,
-                              value: s.firstPutt, columns: 3, height: 48)
-                    ChoiceRow(label: "First putt", options: PuttResult.allCases, title: \.rawValue,
-                              value: Binding(get: { entry.firstPuttResult ?? (entry.putts == 1 ? .made : nil) },
-                                             set: { s.wrappedValue.firstPuttResult = $0 }),
-                              columns: 5, height: 48)
-                }
                 ChoiceRow(label: "Tee shot", options: TeeResult.options(par: hole.par), title: \.rawValue,
                           value: s.teeResult, columns: hole.par == 3 ? 5 : 4)
-                ChoiceRow(label: "Tee club", hint: entry.teeClub == plan.teeClub ? "(the plan)" : "(off plan)",
-                          options: Club.allCases, title: \.rawValue, value: s.teeClub, columns: 6, height: 44)
-                ChoiceRow(label: "Penalty strokes", options: [0, 1, 2, 3], title: { "\($0)" },
-                          value: Binding(get: { entry.penalties }, set: { s.wrappedValue.penalties = $0 ?? 0 }))
-                ChoiceRow(label: "Lost ball", options: [false, true], title: { $0 ? "Yes" : "No" },
-                          value: Binding(get: { entry.lostBall }, set: { s.wrappedValue.lostBall = $0 ?? false }),
-                          columns: 2)
-                ChoiceRow(label: "Green in regulation",
-                          hint: entry.greenOverride == nil && entry.autoGreen != nil ? "(worked out from score + putts)" : nil,
-                          options: [true, false], title: { $0 ? "Hit" : "Missed" },
-                          value: Binding(get: { entry.greenHit },
-                                         set: { s.wrappedValue.greenOverride = ($0 == entry.autoGreen) ? nil : $0 }),
-                          columns: 2)
-                if entry.greenHit == false {
-                    ChoiceRow(label: "Up & down", hint: entry.upDownOverride == nil ? "(auto: par or better = made)" : nil,
-                              options: [UpDown.made, .missed, .notAttempted],
-                              title: { switch $0 { case .made: "Made"; case .missed: "Missed"; case .notAttempted: "No chance" } },
-                              value: Binding(get: { entry.upDown },
-                                             set: { s.wrappedValue.upDownOverride = ($0 == entry.autoUpDown) ? nil : $0 }),
-                              columns: 3)
+
+                Button { withAnimation { showMore.toggle() } } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(showMore ? "Less" : "More").font(.headline)
+                            if !showMore { Text(moreSummary(entry, plan)).font(.caption).foregroundStyle(.secondary) }
+                        }
+                        Spacer()
+                        Image(systemName: showMore ? "chevron.up" : "chevron.down").font(.headline)
+                    }
+                    .padding()
+                    .background(Color.card, in: .rect(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                if showMore {
+                    ChoiceRow(label: "Penalty strokes", options: [0, 1, 2, 3], title: { "\($0)" },
+                              value: Binding(get: { entry.penalties }, set: { s.wrappedValue.penalties = $0 ?? 0 }))
+                    ChoiceRow(label: "Lost ball", options: [false, true], title: { $0 ? "Yes" : "No" },
+                              value: Binding(get: { entry.lostBall }, set: { s.wrappedValue.lostBall = $0 ?? false }),
+                              columns: 2)
+                    ChoiceRow(label: "Tee club", hint: entry.teeClub == plan.teeClub ? "(the plan)" : "(off plan)",
+                              options: Club.allCases, title: \.rawValue, value: s.teeClub, columns: 6, height: 44)
+                    if (entry.putts ?? 0) > 0 {
+                        ChoiceRow(label: "First putt length", hint: "(feet)", options: PuttLength.allCases, title: \.rawValue,
+                                  value: s.firstPutt, columns: 3, height: 48)
+                        ChoiceRow(label: "First putt", options: PuttResult.allCases, title: \.rawValue,
+                                  value: Binding(get: { entry.firstPuttResult ?? (entry.putts == 1 ? .made : nil) },
+                                                 set: { s.wrappedValue.firstPuttResult = $0 }),
+                                  columns: 5, height: 48)
+                    }
+                    ChoiceRow(label: "Green in regulation",
+                              hint: entry.greenOverride == nil && entry.autoGreen != nil ? "(worked out from score + putts)" : nil,
+                              options: [true, false], title: { $0 ? "Hit" : "Missed" },
+                              value: Binding(get: { entry.greenHit },
+                                             set: { s.wrappedValue.greenOverride = ($0 == entry.autoGreen) ? nil : $0 }),
+                              columns: 2)
+                    if entry.greenHit == false {
+                        ChoiceRow(label: "Up & down", hint: entry.upDownOverride == nil ? "(auto: par or better = made)" : nil,
+                                  options: [UpDown.made, .missed, .notAttempted],
+                                  title: { switch $0 { case .made: "Made"; case .missed: "Missed"; case .notAttempted: "No chance" } },
+                                  value: Binding(get: { entry.upDown },
+                                                 set: { s.wrappedValue.upDownOverride = ($0 == entry.autoUpDown) ? nil : $0 }),
+                                  columns: 3)
+                    }
                 }
             }
             .padding()
             .padding(.bottom, 20)
         }
         .fullScreenCover(isPresented: $showMap) { HoleMapView(hole: hole.number) }
+        .onChange(of: "\(entry.score ?? 0)-\(entry.putts ?? 0)-\(entry.teeResult?.rawValue ?? "")") { old, new in
+            // Once you change anything, the "pre-filled" note goes away.
+            if old != new, !old.hasPrefix("0-"), entry.prefilled == true { store.data.rounds[roundIndex].holes[holeIndex].prefilled = false }
+        }
     }
 
     private func header(_ hole: Hole) -> some View {
