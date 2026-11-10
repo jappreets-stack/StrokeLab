@@ -1,12 +1,26 @@
 import SwiftUI
 import MapKit
 
-/// Satellite view of one hole. Tap anywhere for yards from you (or a point you pick) to there, and from there to the green.
+/// Full-screen hole map (from the Course tab or the map button).
 struct HoleMapView: View {
     let hole: Int
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            HoleMapContent(hole: hole)
+                .navigationTitle("Hole \(hole) · Par \(Course.hole(hole).par) · \(Course.hole(hole).yards) yds")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+/// Satellite view of one hole. Tap anywhere for yards from you (or a point you pick) to there, and from there to the green.
+struct HoleMapContent: View {
+    let hole: Int
+    var compactFooter = false
     @Environment(Store.self) private var store
     @Environment(LocationModel.self) private var location
-    @Environment(\.dismiss) private var dismiss
     @State private var camera: MapCameraPosition = .automatic
     @State private var start: CLLocationCoordinate2D?   // only used when you're not on this hole
     @State private var target: CLLocationCoordinate2D?
@@ -24,7 +38,7 @@ struct HoleMapView: View {
     private var from: CLLocationCoordinate2D? { me ?? start }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
             MapReader { proxy in
                 Map(position: $camera) {
                     UserAnnotation()
@@ -55,17 +69,14 @@ struct HoleMapView: View {
                     if me == nil && start == nil { start = c } else { target = c }
                 }
             }
-            .safeAreaInset(edge: .bottom) { footer }
-            .navigationTitle("Hole \(hole) · Par \(h.par) · \(h.yards) yds")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            .overlay(alignment: .topLeading) {
                 if target != nil || start != nil {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Clear") { target = nil; start = nil }
-                    }
+                    Button("Clear") { target = nil; start = nil }
+                        .font(.headline).padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(.black.opacity(0.6), in: .capsule).foregroundStyle(.white).padding(10)
                 }
             }
+            if !compactFooter || target != nil || green == nil { footer }
         }
         .onAppear { location.start(); frame() }
         .onDisappear { location.stop() }

@@ -13,13 +13,10 @@ struct HoleEntryView: View {
         if let ri = store.index(of: roundID) {
             let round = store.data.rounds[ri]
             NavigationStack {
-                TabView(selection: $index) {
-                    ForEach(round.holes.indices, id: \.self) { hi in
-                        HoleForm(roundIndex: ri, holeIndex: hi)
-                            .tag(hi)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                // One hole at a time (no swiping, so dragging the map never flips the hole). Back/Next below.
+                HoleForm(roundIndex: ri, holeIndex: min(index, round.holes.count - 1))
+                    .id(index)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .safeAreaInset(edge: .bottom) { bottomBar(round) }
                 .navigationTitle("Hole \(round.holes[index].hole)")
                 .navigationBarTitleDisplayMode(.inline)
@@ -102,6 +99,8 @@ private struct HoleForm: View {
     @Environment(LocationModel.self) private var location
     @State private var showMap = false
     @State private var showMore = false
+    @State private var mode: Mode = .map
+    enum Mode: String, CaseIterable { case map = "Map", score = "Score" }
 
     private func moreSummary(_ e: HoleScore, _ plan: HolePlan) -> String {
         var parts = ["\(e.teeClub?.rawValue ?? plan.teeClub.rawValue) off the tee"]
@@ -118,6 +117,56 @@ private struct HoleForm: View {
         let hole = Course.hole(entry.hole)
         let plan = store.plan(entry.hole)
 
+        VStack(spacing: 0) {
+            Picker("View", selection: $mode) {
+                ForEach(Mode.allCases, id: \.self) { Text($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal).padding(.top, 6).padding(.bottom, 8)
+
+            if mode == .map {
+                mapMode(hole, plan)
+            } else {
+                scoreMode(s, entry, hole, plan)
+            }
+        }
+        .fullScreenCover(isPresented: $showMap) { HoleMapView(hole: hole.number) }
+        .onChange(of: "\(entry.score ?? 0)-\(entry.putts ?? 0)-\(entry.teeResult?.rawValue ?? "")") { old, new in
+            // Once you change anything, the "pre-filled" note goes away.
+            if old != new, !old.hasPrefix("0-"), entry.prefilled == true { store.data.rounds[roundIndex].holes[holeIndex].prefilled = false }
+        }
+    }
+
+    /// SwingU-style: the hole on satellite with big yardages, plan underneath, one button to enter the score.
+    private func mapMode(_ hole: Hole, _ plan: HolePlan) -> some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .top) {
+                HoleMapContent(hole: hole.number, compactFooter: true)
+                YardageStrip(pins: store.pins(hole.number))
+                    .background(.ultraThinMaterial, in: .rect(cornerRadius: 14))
+                    .padding(.horizontal, 10).padding(.top, 8)
+                    .allowsHitTesting(false)
+            }
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Par \(hole.par) · \(hole.yards) yds").font(.headline)
+                    Spacer()
+                    Text("\(plan.teeClub.rawValue) · target \(plan.target)").font(.headline).foregroundStyle(Color.fairway)
+                }
+                if plan.troubleSide != .none || !plan.hazards.isEmpty {
+                    Label(plan.troubleText, systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                ChoiceButton(title: "Enter score", selected: false, height: 50, font: .headline) {
+                    withAnimation { mode = .score }
+                }
+            }
+            .padding(.horizontal).padding(.vertical, 8)
+        }
+    }
+
+    private func scoreMode(_ s: Binding<HoleScore>, _ entry: HoleScore, _ hole: Hole, _ plan: HolePlan) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header(hole)
@@ -186,11 +235,6 @@ private struct HoleForm: View {
             }
             .padding()
             .padding(.bottom, 20)
-        }
-        .fullScreenCover(isPresented: $showMap) { HoleMapView(hole: hole.number) }
-        .onChange(of: "\(entry.score ?? 0)-\(entry.putts ?? 0)-\(entry.teeResult?.rawValue ?? "")") { old, new in
-            // Once you change anything, the "pre-filled" note goes away.
-            if old != new, !old.hasPrefix("0-"), entry.prefilled == true { store.data.rounds[roundIndex].holes[holeIndex].prefilled = false }
         }
     }
 
