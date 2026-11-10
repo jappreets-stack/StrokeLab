@@ -12,6 +12,7 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
   Tee club is pre-filled from the plan; greens in regulation and up-and-downs are worked out automatically (with override).
 - **Green pins from satellite** — tap front / center / back of each green on Apple Maps imagery; live GPS yardages appear on each hole.
 - **Hole map** — satellite view of each hole, turned to face the green from where you stand. Tap any spot for yards to it and what's left to the green (a layup planner).
+- **Putting** — first-putt length and how it finished (made / short / long / left / right) per hole, a green-reading note on each hole's plan card, and a phone-as-a-level tool for the practice green.
 - **Swing coach** — records your swing at up to 240 fps (with a countdown so a propped-up phone works), tracks your body on every frame with Apple's Vision pose detection, finds address / top / impact / finish, and draws your hand path plus shaft and shoulder plane lines over the video. Measures tempo, early extension, posture loss, head movement, sway and turn, then gives on-device coaching cards with drills.
 - **Warm-up tracking** — log whether you warmed up, with a built-in 5-minute routine, so the stats can show whether it matters.
 - **Scores-only mode** for backfilling old rounds.

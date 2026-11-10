@@ -39,6 +39,14 @@ nonisolated enum RoundType: String, Codable, CaseIterable, Sendable {
     }
 }
 
+nonisolated enum PuttLength: String, Codable, CaseIterable, Sendable {
+    case tap = "< 3 ft", short = "3–6", mid = "6–10", medium = "10–20", long = "20–35", lag = "35+"
+}
+
+nonisolated enum PuttResult: String, Codable, CaseIterable, Sendable {
+    case made = "Made", short = "Short", long = "Long", left = "Left", right = "Right"
+}
+
 nonisolated enum UpDown: String, Codable, Sendable {
     case notAttempted, missed, made
 }
@@ -52,6 +60,7 @@ nonisolated struct HolePlan: Codable, Sendable, Equatable {
     var teeClub: Club = .hybrid3
     var target: Int
     var note: String = ""
+    var greenRead: String?          // e.g. "everything breaks toward the clubhouse"
 
     var troubleText: String {
         if troubleSide == .none && hazards.isEmpty { return "No trouble set" }
@@ -85,6 +94,8 @@ nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
     var penalties: Int = 0
     var lostBall: Bool = false
     var upDownOverride: UpDown?     // nil = work it out
+    var firstPutt: PuttLength?      // length of the first putt
+    var firstPuttResult: PuttResult? // how the first putt finished
     var id: Int { hole }
 
     var par: Int { Course.hole(hole).par }

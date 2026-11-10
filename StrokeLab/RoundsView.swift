@@ -110,6 +110,14 @@ struct RoundDetailView: View {
                         stat("Greens hit", "\(gir) of \(r.entered.count)")
                         let tries = r.entered.filter { $0.upDown != .notAttempted }
                         stat("Up & downs", "\(tries.filter { $0.upDown == .made }.count) of \(tries.count)")
+                        let firsts = r.entered.compactMap { h in h.firstPuttResult ?? (h.putts == 1 ? .made : nil) }
+                        if !firsts.isEmpty {
+                            let counts = PuttResult.allCases.compactMap { res -> String? in
+                                let n = firsts.filter { $0 == res }.count
+                                return n > 0 ? "\(n) \(res.rawValue.lowercased())" : nil
+                            }
+                            stat("First putts", counts.joined(separator: " · "))
+                        }
                         if let w = r.warmUp { stat("Warm-up", w.rawValue) }
                     }
                     stat("Blow-ups (7+)", "\(r.entered.filter { ($0.score ?? 0) >= 7 }.count)")

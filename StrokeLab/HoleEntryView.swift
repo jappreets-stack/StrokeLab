@@ -106,6 +106,14 @@ private struct HoleForm: View {
                           title: { "\($0)" }, value: s.score, columns: 4, height: 60)
                 ChoiceRow(label: "Putts", options: [0, 1, 2, 3, 4], title: { "\($0)" },
                           value: s.putts, columns: 5)
+                if (entry.putts ?? 0) > 0 {
+                    ChoiceRow(label: "First putt length", hint: "(feet)", options: PuttLength.allCases, title: \.rawValue,
+                              value: s.firstPutt, columns: 3, height: 48)
+                    ChoiceRow(label: "First putt", options: PuttResult.allCases, title: \.rawValue,
+                              value: Binding(get: { entry.firstPuttResult ?? (entry.putts == 1 ? .made : nil) },
+                                             set: { s.wrappedValue.firstPuttResult = $0 }),
+                              columns: 5, height: 48)
+                }
                 ChoiceRow(label: "Tee shot", options: TeeResult.options(par: hole.par), title: \.rawValue,
                           value: s.teeResult, columns: hole.par == 3 ? 5 : 4)
                 ChoiceRow(label: "Tee club", hint: entry.teeClub == plan.teeClub ? "(the plan)" : "(off plan)",
@@ -168,6 +176,9 @@ struct PlanCard: View {
                 Text(plan.troubleText).font(.headline)
             }
             if !plan.note.isEmpty { Text(plan.note).font(.callout).foregroundStyle(.secondary) }
+            if let read = plan.greenRead, !read.isEmpty {
+                Label(read, systemImage: "arrow.down.right.circle.fill").font(.callout.weight(.semibold))
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)

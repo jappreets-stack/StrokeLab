@@ -11,6 +11,9 @@ struct CourseView: View {
             }
             .navigationTitle("Course")
             .navigationDestination(for: Int.self) { HolePlanEditor(hole: $0) }
+            .toolbar {
+                NavigationLink { GreenLevelView() } label: { Label("Green level", systemImage: "level") }
+            }
         }
     }
 
@@ -74,6 +77,9 @@ struct HolePlanEditor: View {
                 Button("View hole map", systemImage: "map") { showMap = true }
             }
             Section("Green") {
+                TextField("How the green breaks (e.g. everything toward the clubhouse)",
+                          text: Binding(get: { plan.wrappedValue.greenRead ?? "" }, set: { plan.wrappedValue.greenRead = $0 }),
+                          axis: .vertical).lineLimit(1...4)
                 NavigationLink {
                     PinMapView(hole: hole)
                 } label: {
