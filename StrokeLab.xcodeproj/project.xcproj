@@ -67,6 +67,7 @@
         "GENERATE_INFOPLIST_FILE": "YES",
         "INFOPLIST_KEY_CFBundleDisplayName": "StrokeLab",
         "INFOPLIST_KEY_ITSAppUsesNonExemptEncryption": "NO",
+        "INFOPLIST_KEY_NSCameraUsageDescription": "StrokeLab records your swing in slow motion to track your body and swing plane. Videos stay on your phone.",
         "INFOPLIST_KEY_NSLocationWhenInUseUsageDescription": "StrokeLab uses your location to show yardages to the green. Your location never leaves your device.",
         "INFOPLIST_KEY_UIApplicationSceneManifest_Generation": "YES",
         "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents": "YES",
