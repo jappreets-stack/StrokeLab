@@ -57,6 +57,7 @@ struct WatchHoleView: View {
 
     /// Before the round: one button. Starting the golf workout keeps StrokeLab on screen all round.
     private var startScreen: some View {
+        ScrollView {
         VStack(spacing: 10) {
             Image(systemName: "flag.fill").font(.title).foregroundStyle(.green)
             Text("Hole \(hole)").font(.headline)
@@ -66,8 +67,16 @@ struct WatchHoleView: View {
                 Text("Start round").font(.headline).frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent).tint(.green)
-            if let e = workout.error { Text(e).font(.caption2).foregroundStyle(.orange).multilineTextAlignment(.center) }
-            else { Text("Keeps yardages on screen all round").font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center) }
+            if let e = workout.error {
+                Text(e).font(.caption2).foregroundStyle(.orange).multilineTextAlignment(.center)
+                    .lineLimit(nil).fixedSize(horizontal: false, vertical: true)
+            }
+            else {
+                Text("Keeps yardages on screen all round")
+                    .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    .lineLimit(nil).fixedSize(horizontal: false, vertical: true)
+            }
+        }
         }
         .onAppear { gps.start() }
     }
