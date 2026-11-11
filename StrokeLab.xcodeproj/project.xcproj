@@ -28,7 +28,21 @@
         },
       ],
     },
-    { "kind": "folder", "path": "StrokeLab Watch App", "target-membership": [ "StrokeLab Watch App" ] },
+    {
+      "kind": "folder",
+      "path": "StrokeLab Watch App",
+      "target-membership": [
+        "StrokeLab Watch App",
+      ],
+      "membership-exceptions": [
+        {
+          "target": "StrokeLab Watch App",
+          "exclusions": [
+            "Info.plist",
+          ],
+        },
+      ],
+    },
     {
       "kind": "group",
       "name": "Products",
@@ -108,7 +122,11 @@
         "DEVELOPMENT_TEAM": "D9AGY5UL5N",
         "ENABLE_PREVIEWS": "YES",
         "GENERATE_INFOPLIST_FILE": "YES",
+        "CODE_SIGN_ENTITLEMENTS": "StrokeLab Watch App/StrokeLab Watch App.entitlements",
+        "INFOPLIST_FILE": "StrokeLab Watch App/Info.plist",
         "INFOPLIST_KEY_CFBundleDisplayName": "StrokeLab",
+        "INFOPLIST_KEY_NSHealthShareUsageDescription": "StrokeLab reads your calories and heart rate during a round to show them with the golf workout.",
+        "INFOPLIST_KEY_NSHealthUpdateUsageDescription": "StrokeLab saves each round as a golf workout in Apple Fitness.",
         "INFOPLIST_KEY_NSLocationWhenInUseUsageDescription": "StrokeLab uses your location to show yardages to the green. Your location never leaves your device.",
         "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown",
         "INFOPLIST_KEY_WKCompanionAppBundleIdentifier": "com.jappreets.strokelab",

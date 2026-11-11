@@ -30,9 +30,10 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 
 ### Apple Watch (first version)
 - Front / center / back yards from the watch's own GPS, hole and par; Digital Crown or arrows to change holes.
+- Each round runs as a HealthKit golf workout, so the yardages stay on screen on every wrist raise and the round lands in Apple Fitness.
 
 ## Roadmap
-- Apple Watch: hole plan, score + putts with the Digital Crown, round as a golf workout, sync with the phone.
+- Apple Watch: hole plan, score + putts with the Digital Crown, sync with the phone.
 - Dashboard: average vs par by hole, worst holes, blow-ups, penalties & one-ball rounds, putting, front vs back, 10-round trend.
 - Practice log: wedge carries by club and swing (easy / hard / all-out), 9-ball up-and-down drill.
 

@@ -5,7 +5,7 @@ import Observation
 @main
 struct StrokeLabWatchApp: App {
     var body: some Scene {
-        WindowGroup { WatchHoleView() }
+        WindowGroup { NavigationStack { WatchHoleView() } }
     }
 }
 
@@ -44,18 +44,42 @@ struct WatchHoleView: View {
     @AppStorage("watchHole") private var hole = 1
     @State private var gps = WatchLocation()
     @State private var crown = 1.0
+    @State private var workout = GolfWorkout()
+    @State private var confirmEnd = false
     @Environment(\.scenePhase) private var phase
 
     private var h: Hole { Course.hole(hole) }
     private var pins: GreenPins { CourseGreens.pins[hole - 1] }
 
     var body: some View {
+        if workout.running { holeScreen } else { startScreen }
+    }
+
+    /// Before the round: one button. Starting the golf workout keeps StrokeLab on screen all round.
+    private var startScreen: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "flag.fill").font(.title).foregroundStyle(.green)
+            Text("Hole \(hole)").font(.headline)
+            Button {
+                Task { await workout.start() }
+            } label: {
+                Text("Start round").font(.headline).frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent).tint(.green)
+            if let e = workout.error { Text(e).font(.caption2).foregroundStyle(.orange).multilineTextAlignment(.center) }
+            else { Text("Keeps yardages on screen all round").font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center) }
+        }
+        .onAppear { gps.start() }
+    }
+
+    private var holeScreen: some View {
         VStack(spacing: 2) {
             HStack {
                 Text("Hole \(hole)").font(.headline)
                 Spacer()
                 Text("Par \(h.par)").font(.headline).foregroundStyle(.green)
             }
+            .onLongPressGesture { confirmEnd = true }
             Spacer(minLength: 0)
             Text(text(gps.yards(to: pins.center)))
                 .font(.system(size: 64, weight: .heavy, design: .rounded))
@@ -86,6 +110,15 @@ struct WatchHoleView: View {
             if n != hole { hole = n }
         }
         .onAppear { crown = Double(hole); gps.start() }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { confirmEnd = true } label: { Image(systemName: "stop.fill") }.tint(.red)
+            }
+        }
+        .confirmationDialog("End round?", isPresented: $confirmEnd) {
+            Button("End round", role: .destructive) { Task { await workout.end(); hole = 1; crown = 1 } }
+            Button("Keep playing", role: .cancel) {}
+        } message: { Text("Saves the round to Apple Fitness and lets the watch go back to the clock.") }
         .onChange(of: phase) { _, p in if p == .active { gps.start() } }
     }
 
