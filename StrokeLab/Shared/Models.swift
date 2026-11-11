@@ -74,12 +74,28 @@ nonisolated struct Coordinate: Codable, Sendable, Equatable {
     var lon: Double
 }
 
+extension Coordinate {
+    nonisolated func yards(to o: Coordinate) -> Double {
+        let r = 6_371_000.0, p1 = lat * .pi / 180, p2 = o.lat * .pi / 180
+        let dp = p2 - p1, dl = (o.lon - lon) * .pi / 180
+        let h = sin(dp / 2) * sin(dp / 2) + cos(p1) * cos(p2) * sin(dl / 2) * sin(dl / 2)
+        return 2 * r * asin(min(1, sqrt(h))) * 1.09361
+    }
+}
+
 nonisolated struct GreenPins: Codable, Sendable, Equatable {
     var hole: Int
     var front: Coordinate?
     var center: Coordinate?
     var back: Coordinate?
     var isComplete: Bool { front != nil && center != nil && back != nil }
+    /// Widest gap between this green's pins, in yards. A real green is under ~50 yds deep.
+    var spreadYards: Double {
+        let pts = [front, center, back].compactMap { $0 }
+        var m = 0.0
+        for i in pts.indices { for j in pts.indices where j > i { m = max(m, pts[i].yards(to: pts[j])) } }
+        return m
+    }
 }
 
 // MARK: - Rounds
@@ -125,6 +141,7 @@ nonisolated struct Round: Codable, Sendable, Identifiable, Equatable {
     var warmUp: WarmUp?
     var scoresOnly = false
     var finished = false
+    var currentHole: Int?          // hole number you were last on
     var holes: [HoleScore]
 
     init(type: RoundType, date: Date = Date(), scoresOnly: Bool = false) {

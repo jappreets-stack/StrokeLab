@@ -6,6 +6,7 @@ import Observation
 final class LocationModel {
     var location: CLLocation?
     var denied = false
+    var accuracyYards: Int? { location.map { Int(($0.horizontalAccuracy * 1.09361).rounded()) } }
     private var task: Task<Void, Never>?
     private var session: CLServiceSession?
     private var users = 0
@@ -16,10 +17,10 @@ final class LocationModel {
         session = CLServiceSession(authorization: .whenInUse)
         task = Task { [weak self] in
             do {
-                for try await update in CLLocationUpdate.liveUpdates(.otherNavigation) {
+                for try await update in CLLocationUpdate.liveUpdates(.fitness) {
                     guard let self else { return }
                     self.denied = update.authorizationDenied
-                    if let loc = update.location, loc.horizontalAccuracy >= 0, loc.horizontalAccuracy < 50 {
+                    if let loc = update.location, loc.horizontalAccuracy >= 0, loc.horizontalAccuracy < 25 {
                         self.location = loc
                     }
                 }

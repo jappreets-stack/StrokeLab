@@ -36,11 +36,16 @@ struct HoleEntryView: View {
                 }
             }
             .onAppear {
-                index = round.holes.firstIndex { !$0.isEntered } ?? 0
-                prefill(ri, index)
+                index = round.currentHole.flatMap { h in round.holes.firstIndex { $0.hole == h } }
+                    ?? round.holes.firstIndex { !$0.isEntered } ?? 0
                 location.start()
             }
-            .onChange(of: index) { _, i in prefill(ri, i) }
+            .onChange(of: index) { _, i in
+                // Remember where you are, so reopening the round lands on the same hole.
+                if store.data.rounds.indices.contains(ri), store.data.rounds[ri].holes.indices.contains(i) {
+                    store.data.rounds[ri].currentHole = store.data.rounds[ri].holes[i].hole
+                }
+            }
             .onDisappear { location.stop() }
             .confirmationDialog("Finish this round?", isPresented: $confirmFinish, titleVisibility: .visible) {
                 Button("Finish round") {
@@ -56,19 +61,6 @@ struct HoleEntryView: View {
         } else {
             Text("Round not found").onAppear { dismiss() }
         }
-    }
-
-    /// When you arrive on a hole: score = your target, 2 putts, tee shot in the fairway (green on par 3s).
-    /// Most holes then need a tap or two to correct, or none.
-    private func prefill(_ ri: Int, _ hi: Int) {
-        guard store.data.rounds.indices.contains(ri), store.data.rounds[ri].holes.indices.contains(hi) else { return }
-        var h = store.data.rounds[ri].holes[hi]
-        guard h.score == nil, !store.data.rounds[ri].scoresOnly else { return }
-        h.score = store.plan(h.hole).target
-        h.putts = 2
-        h.teeResult = h.par == 3 ? .green : .fairway
-        h.prefilled = true
-        store.data.rounds[ri].holes[hi] = h
     }
 
     private func bottomBar(_ round: Round) -> some View {
@@ -131,10 +123,6 @@ private struct HoleForm: View {
             }
         }
         .fullScreenCover(isPresented: $showMap) { HoleMapView(hole: hole.number) }
-        .onChange(of: "\(entry.score ?? 0)-\(entry.putts ?? 0)-\(entry.teeResult?.rawValue ?? "")") { old, new in
-            // Once you change anything, the "pre-filled" note goes away.
-            if old != new, !old.hasPrefix("0-"), entry.prefilled == true { store.data.rounds[roundIndex].holes[holeIndex].prefilled = false }
-        }
     }
 
     /// SwingU-style: the hole on satellite with big yardages, plan underneath, one button to enter the score.
@@ -175,11 +163,6 @@ private struct HoleForm: View {
                     .onTapGesture { showMap = true }
                 PlanCard(plan: plan)
 
-                if entry.prefilled == true {
-                    Label("Pre-filled with your target, 2 putts, \(hole.par == 3 ? "green" : "fairway"). Tap anything that was different.",
-                          systemImage: "wand.and.stars")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
                 ChoiceRow(label: "Score", options: Array(max(1, hole.par - 1)...(hole.par + 6)),
                           title: { "\($0)" }, value: s.score, columns: 4, height: 60)
                 ChoiceRow(label: "Putts", options: [0, 1, 2, 3, 4], title: { "\($0)" },
@@ -293,6 +276,11 @@ struct YardageStrip: View {
                 cell("Back", location.yards(to: pins.back))
             }
             .padding(.vertical, 6)
+            .overlay(alignment: .bottomTrailing) {
+                if let a = location.accuracyYards {
+                    Text("GPS ±\(a)").font(.caption2.weight(.semibold)).foregroundStyle(a > 10 ? .orange : .secondary).padding(6)
+                }
+            }
             .background(Color.card, in: .rect(cornerRadius: 14))
         }
     }

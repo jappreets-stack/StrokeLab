@@ -8,7 +8,7 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 ## Features (Round 1 — iPhone)
 - **Course preloaded** — Redwood Empire GCC, White tees (par 72, 68.7 / 124): yards, par and stroke index for all 18 holes.
 - **Hole plan card** — tee club, target score, trouble side (OB / water / trees / bunker) and a note, shown at the top of every hole.
-- **One-hand hole entry** — each hole opens pre-filled (your target score, 2 putts, fairway) so most holes take 0–2 taps; score, putts and tee shot up front, everything else (penalties, lost ball, tee club, putt details) behind one "More" button.
+- **One-hand hole entry** — score, putts and tee shot up front, everything else (penalties, lost ball, tee club, putt details) behind one "More" button.
   Tee club is pre-filled from the plan; greens in regulation and up-and-downs are worked out automatically (with override).
 - **Green pins from satellite** — tap front / center / back of each green on Apple Maps imagery; live GPS yardages appear on each hole.
 - **Hole map** — each hole opens on its satellite view (like SwingU) with big front / center / back yards on top, turned to face the green from where you stand. Tap any spot for yards to it and what's left to the green (a layup planner).

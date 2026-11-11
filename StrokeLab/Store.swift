@@ -12,9 +12,10 @@ final class Store {
         if let raw = try? Data(contentsOf: Self.fileURL),
            var saved = try? JSONDecoder.app.decode(AppData.self, from: raw) {
             Self.migrate(&saved)
+            Self.migrate3(&saved)
             data = saved
         } else {
-            data = AppData(version: 2, plans: Self.draftPlans(), pins: (1...18).map { GreenPins(hole: $0) })
+            data = AppData(version: 3, plans: Self.draftPlans(), pins: (1...18).map { GreenPins(hole: $0) })
         }
         save()  // persist any migration right away
     }
@@ -104,6 +105,23 @@ final class Store {
             d.plans[i].note = h.par == 5 ? driverPar5Note : driverPar4Note
         }
         d.version = 2
+    }
+
+    /// v2 → v3: undo pre-filled scores you never touched, and drop green pins that can't be one green.
+    private static func migrate3(_ d: inout AppData) {
+        guard d.version < 3 else { return }
+        for r in d.rounds.indices {
+            for h in d.rounds[r].holes.indices where d.rounds[r].holes[h].prefilled == true {
+                d.rounds[r].holes[h].score = nil
+                d.rounds[r].holes[h].putts = nil
+                d.rounds[r].holes[h].teeResult = nil
+                d.rounds[r].holes[h].prefilled = nil
+            }
+        }
+        for i in d.pins.indices where d.pins[i].spreadYards > 60 {
+            d.pins[i] = GreenPins(hole: d.pins[i].hole)
+        }
+        d.version = 3
     }
 
     static func draftPlans() -> [HolePlan] {
