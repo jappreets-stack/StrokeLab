@@ -5,7 +5,7 @@ import Observation
 @main
 struct StrokeLabWatchApp: App {
     var body: some Scene {
-        WindowGroup { NavigationStack { WatchHoleView() } }
+        WindowGroup { WatchHoleView() }
     }
 }
 
@@ -85,7 +85,8 @@ struct WatchHoleView: View {
                 .font(.system(size: 64, weight: .heavy, design: .rounded))
                 .monospacedDigit()
                 .minimumScaleFactor(0.6)
-            Text("CENTER").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+            Text("CENTER" + (gps.accuracyYards.map { " · ±\($0)" } ?? " · GPS…"))
+                .font(.caption2.weight(.bold)).foregroundStyle(.secondary)
             HStack {
                 small(text(gps.yards(to: pins.front)), "FRONT")
                 Spacer()
@@ -95,8 +96,8 @@ struct WatchHoleView: View {
             HStack {
                 Button { change(-1) } label: { Image(systemName: "chevron.left") }
                     .disabled(hole == 1)
-                Text(gps.accuracyYards.map { "±\($0)" } ?? "GPS…")
-                    .font(.caption2).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                Button { confirmEnd = true } label: { Image(systemName: "stop.fill").foregroundStyle(.red) }
+                    .frame(maxWidth: .infinity)
                 Button { change(1) } label: { Image(systemName: "chevron.right") }
                     .disabled(hole == 18)
             }
@@ -110,11 +111,6 @@ struct WatchHoleView: View {
             if n != hole { hole = n }
         }
         .onAppear { crown = Double(hole); gps.start() }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button { confirmEnd = true } label: { Image(systemName: "stop.fill") }.tint(.red)
-            }
-        }
         .confirmationDialog("End round?", isPresented: $confirmEnd) {
             Button("End round", role: .destructive) { Task { await workout.end(); hole = 1; crown = 1 } }
             Button("Keep playing", role: .cancel) {}
