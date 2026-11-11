@@ -13,9 +13,10 @@ final class Store {
            var saved = try? JSONDecoder.app.decode(AppData.self, from: raw) {
             Self.migrate(&saved)
             Self.migrate3(&saved)
+            Self.migrate4(&saved)
             data = saved
         } else {
-            data = AppData(version: 3, plans: Self.draftPlans(), pins: (1...18).map { GreenPins(hole: $0) })
+            data = AppData(version: 4, plans: Self.draftPlans(), pins: CourseGreens.pins)
         }
         save()  // persist any migration right away
     }
@@ -122,6 +123,13 @@ final class Store {
             d.pins[i] = GreenPins(hole: d.pins[i].hole)
         }
         d.version = 3
+    }
+
+    /// v3 → v4: use the surveyed greens from the course map for every hole.
+    private static func migrate4(_ d: inout AppData) {
+        guard d.version < 4 else { return }
+        d.pins = CourseGreens.pins
+        d.version = 4
     }
 
     static func draftPlans() -> [HolePlan] {

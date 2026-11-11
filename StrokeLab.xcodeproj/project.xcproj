@@ -22,6 +22,7 @@
           "target": "StrokeLab Watch App",
           "inclusions": [
             "Shared/Course.swift",
+            "Shared/CourseGreens.swift",
             "Shared/Models.swift",
           ],
         },

@@ -10,7 +10,7 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 - **Hole plan card** — tee club, target score, trouble side (OB / water / trees / bunker) and a note, shown at the top of every hole.
 - **One-hand hole entry** — score, putts and tee shot up front, everything else (penalties, lost ball, tee club, putt details) behind one "More" button.
   Tee club is pre-filled from the plan; greens in regulation and up-and-downs are worked out automatically (with override).
-- **Green pins from satellite** — tap front / center / back of each green on Apple Maps imagery; live GPS yardages appear on each hole.
+- **Greens built in** — front / center / back of all 18 greens, computed from the course's OpenStreetMap outlines (green polygons + each hole's tee-to-green line), so GPS yardages work out of the box. You can still adjust any green by tapping the satellite map.
 - **Hole map** — each hole opens on its satellite view (like SwingU) with big front / center / back yards on top, turned to face the green from where you stand. Tap any spot for yards to it and what's left to the green (a layup planner).
 - **Putting** — first-putt length and how it finished (made / short / long / left / right) per hole, a green-reading note on each hole's plan card, and a phone-as-a-level tool for the practice green.
 - **Swing coach** — records your swing at up to 240 fps (with a countdown so a propped-up phone works), tracks your body on every frame with Apple's Vision pose detection, finds address / top / impact / finish, and draws your hand path plus shaft and shoulder plane lines over the video. Measures tempo, early extension, posture loss, head movement, sway and turn, then gives on-device coaching cards with drills.
@@ -32,3 +32,6 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 - Apple Watch: front / center / back yardages, hole plan, score + putts with the Digital Crown, round as a golf workout.
 - Dashboard: average vs par by hole, worst holes, blow-ups, penalties & one-ball rounds, putting, front vs back, 10-round trend.
 - Practice log: wedge carries by club and swing (easy / hard / all-out), 9-ball up-and-down drill.
+
+## Credits
+Course map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL).
