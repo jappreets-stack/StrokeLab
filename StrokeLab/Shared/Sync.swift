@@ -13,6 +13,7 @@ nonisolated struct WatchEvent: Codable, Sendable {
         case start(Round)
         case score(round: UUID, hole: Int, score: Int?, putts: Int?)
         case hole(round: UUID, hole: Int)
+        case tee(round: UUID, hole: Int, result: TeeResult?, miss: MissSize?)
         case end(round: UUID)
     }
     var kind: Kind

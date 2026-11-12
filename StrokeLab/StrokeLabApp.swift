@@ -22,6 +22,7 @@ struct RootView: View {
     var body: some View {
         TabView {
             Tab("Play", systemImage: "figure.golf") { PlayView() }
+            Tab("Stats", systemImage: "chart.bar.xaxis") { StatsView() }
             Tab("Rounds", systemImage: "list.number") { RoundsView() }
             Tab("Swing", systemImage: "video.fill") { SwingListView() }
             Tab("Course", systemImage: "map") { CourseView() }

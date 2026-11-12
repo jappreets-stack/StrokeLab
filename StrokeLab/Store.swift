@@ -86,6 +86,11 @@ final class Store {
                 data.rounds[ri].holes.append(h)
                 data.rounds[ri].holes.sort { $0.hole < $1.hole }
             }
+        case .tee(let id, let hole, let result, let miss):
+            guard let ri = index(of: id),
+                  let hi = data.rounds[ri].holes.firstIndex(where: { $0.hole == hole }) else { return }
+            data.rounds[ri].holes[hi].teeResult = result
+            data.rounds[ri].holes[hi].missSize = miss
         case .hole(let id, let hole):
             guard let ri = index(of: id) else { return }
             data.rounds[ri].currentHole = hole

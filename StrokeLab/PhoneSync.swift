@@ -61,6 +61,7 @@ final class PhoneSync: NSObject, WCSessionDelegate {
             case .start(let r): key = "start-\(r.id)"
             case .score(let id, let hole, _, _): key = "score-\(id)-\(hole)"
             case .hole(let id, _): key = "hole-\(id)"
+            case .tee(let id, let hole, _, _): key = "tee-\(id)-\(hole)"
             case .end(let id): key = "end-\(id)"
             }
             if let last = self.lastApplied[key], last >= e.at { return }

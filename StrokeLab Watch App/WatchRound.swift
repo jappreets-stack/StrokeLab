@@ -12,7 +12,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
     var hole = 1 { didSet { save() } }
 
     /// Scores tapped here that the iPhone hasn't confirmed yet (so a late update can't undo them).
-    @ObservationIgnored private var pending: [Int: (score: Int?, putts: Int?)] = [:]
+    @ObservationIgnored private var pending: [Int: HoleScore] = [:]
     /// Hole picked here that the iPhone hasn't confirmed yet.
     @ObservationIgnored private var pendingHole: (hole: Int, at: Date)?
 
@@ -69,8 +69,22 @@ final class WatchRound: NSObject, WCSessionDelegate {
             r.holes.sort { $0.hole < $1.hole }
         }
         round = r
-        pending[hole] = (score, putts)
+        pending[hole] = r.holes.first { $0.hole == hole }
         send(.score(round: r.id, hole: hole, score: score, putts: putts))
+    }
+
+    func set(tee: TeeResult?, miss: MissSize?) {
+        guard var r = round else { return }
+        if r.holes.firstIndex(where: { $0.hole == hole }) == nil {
+            r.holes.append(HoleScore(hole: hole)); r.holes.sort { $0.hole < $1.hole }
+        }
+        let i = r.holes.firstIndex { $0.hole == hole }!
+        r.holes[i].teeResult = tee
+        r.holes[i].missSize = r.holes[i].teeMissed ? miss : nil
+        round = r
+        pending[hole] = r.holes[i]
+        send(.score(round: r.id, hole: hole, score: r.holes[i].score, putts: r.holes[i].putts))
+        send(.tee(round: r.id, hole: hole, result: r.holes[i].teeResult, miss: r.holes[i].missSize))
     }
 
     func end() {
@@ -104,8 +118,13 @@ final class WatchRound: NSObject, WCSessionDelegate {
             // Same round: take the phone's copy, but keep scores tapped here that it hasn't seen yet.
             for (n, v) in pending {
                 if let i = p.holes.firstIndex(where: { $0.hole == n }) {
-                    if p.holes[i].score == v.score && p.holes[i].putts == v.putts { pending[n] = nil }
-                    else { p.holes[i].score = v.score; p.holes[i].putts = v.putts }
+                    let same = p.holes[i].score == v.score && p.holes[i].putts == v.putts
+                        && p.holes[i].teeResult == v.teeResult && p.holes[i].missSize == v.missSize
+                    if same { pending[n] = nil }
+                    else {
+                        p.holes[i].score = v.score; p.holes[i].putts = v.putts
+                        p.holes[i].teeResult = v.teeResult; p.holes[i].missSize = v.missSize
+                    }
                 }
             }
             round = p

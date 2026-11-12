@@ -34,8 +34,11 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 - Each round runs as a HealthKit Golf workout (heart rate, calories, distance), so the yardages stay on screen on every wrist raise and the round lands in Apple Fitness.
 - Start a round on either device and the other picks it up (WatchConnectivity; starting on the iPhone opens the watch app and its workout). Scores tapped on the watch land in the phone's round.
 
+### Stats dashboard
+- Plain-English takeaways at the top (blow-ups, miss direction, putt speed patterns), then 9-hole score trend vs break-90 pace, scoring mix, average over par by hole (tap a bar for that hole), tee shots with what each miss cost (fairway vs just off vs in trouble), par 3s, first putts by length, greens / up & downs / penalties, warm-up vs none.
+- Filter by front / back / all holes and last 5 / 10 / all rounds. Built with Swift Charts.
+
 ## Roadmap
-- Dashboard: average vs par by hole, worst holes, blow-ups, penalties & one-ball rounds, putting, front vs back, 10-round trend.
 - Practice log: wedge carries by club and swing (easy / hard / all-out), 9-ball up-and-down drill.
 
 ## Credits

@@ -175,6 +175,10 @@ private struct HoleForm: View {
                           value: s.putts, columns: 5)
                 ChoiceRow(label: "Tee shot", options: TeeResult.options(par: hole.par), title: \.rawValue,
                           value: s.teeResult, columns: hole.par == 3 ? 5 : 4)
+                if entry.teeMissed {
+                    ChoiceRow(label: "How far off?", options: MissSize.allCases, title: \.rawValue,
+                              value: s.missSize, columns: 2, height: 48)
+                }
 
                 Button { withAnimation { showMore.toggle() } } label: {
                     HStack {

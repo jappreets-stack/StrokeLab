@@ -16,6 +16,11 @@ nonisolated enum TeeResult: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// How bad a missed tee shot was: a foot into the first cut is not the same as the trees.
+nonisolated enum MissSize: String, Codable, CaseIterable, Sendable {
+    case justOff = "Just off", trouble = "In trouble"
+}
+
 nonisolated enum TroubleSide: String, Codable, CaseIterable, Sendable {
     case none = "None", left = "Left", right = "Right", both = "Both sides", short = "Short", long = "Long"
 }
@@ -106,6 +111,7 @@ nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
     var putts: Int?
     var teeClub: Club?
     var teeResult: TeeResult?
+    var missSize: MissSize?         // only when the tee shot missed
     var greenOverride: Bool?        // nil = work it out from score and putts
     var penalties: Int = 0
     var lostBall: Bool = false
@@ -114,6 +120,7 @@ nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
     var firstPuttResult: PuttResult? // how the first putt finished
     var prefilled: Bool?            // true until you change anything on this hole
     var id: Int { hole }
+    var teeMissed: Bool { teeResult != nil && teeResult != .fairway && teeResult != .green }
 
     var par: Int { Course.hole(hole).par }
     var isEntered: Bool { score != nil }

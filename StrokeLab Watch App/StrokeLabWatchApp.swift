@@ -190,6 +190,20 @@ struct WatchScoreView: View {
                 grid(Array(0...4), columns: 5, selected: current?.putts) { n in
                     rounds.set(score: current?.score, putts: n)
                 }
+                label("TEE SHOT")
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)], spacing: 4) {
+                    ForEach(TeeResult.options(par: par), id: \.self) { t in
+                        choice(t.rawValue, current?.teeResult == t) { rounds.set(tee: t, miss: current?.missSize) }
+                    }
+                }
+                if current?.teeMissed == true {
+                    label("HOW FAR OFF?")
+                    HStack(spacing: 4) {
+                        ForEach(MissSize.allCases, id: \.self) { m in
+                            choice(m.rawValue, current?.missSize == m) { rounds.set(tee: current?.teeResult, miss: m) }
+                        }
+                    }
+                }
                 if hole < 18 {
                     Button {
                         rounds.go(to: hole + 1); close()
@@ -207,6 +221,15 @@ struct WatchScoreView: View {
             Button("End round", role: .destructive) { close(); rounds.end() }
             Button("Keep playing", role: .cancel) {}
         } message: { Text("Saves the round on your iPhone and the golf workout in Apple Fitness.") }
+    }
+
+    private func choice(_ title: String, _ on: Bool, tap: @escaping () -> Void) -> some View {
+        Button(action: tap) {
+            Text(title).font(.footnote.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, minHeight: 34)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(on ? .green : Color.gray.opacity(0.35))
     }
 
     private func label(_ t: String) -> some View {
