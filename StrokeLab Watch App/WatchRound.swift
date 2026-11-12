@@ -13,6 +13,8 @@ final class WatchRound: NSObject, WCSessionDelegate {
 
     /// Scores tapped here that the iPhone hasn't confirmed yet (so a late update can't undo them).
     @ObservationIgnored private var pending: [Int: (score: Int?, putts: Int?)] = [:]
+    /// Hole picked here that the iPhone hasn't confirmed yet.
+    @ObservationIgnored private var pendingHole: (hole: Int, at: Date)?
 
     override init() {
         super.init()
@@ -53,6 +55,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
         guard var r = round else { return }
         r.currentHole = hole
         round = r
+        pendingHole = (hole, Date())
         send(.hole(round: r.id, hole: hole))
     }
 
@@ -106,6 +109,14 @@ final class WatchRound: NSObject, WCSessionDelegate {
                 }
             }
             round = p
+            // Follow the hole you picked on the iPhone.
+            if let ph = p.currentHole {
+                if let mine = pendingHole {
+                    if mine.hole == ph || Date().timeIntervalSince(mine.at) > 30 { pendingHole = nil; if ph != hole { hole = ph } }
+                } else if ph != hole {
+                    hole = ph
+                }
+            }
         } else if round == nil || p.date >= round!.date {
             // A round started on the iPhone: pick it up.
             pending = [:]

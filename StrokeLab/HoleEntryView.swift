@@ -46,6 +46,12 @@ struct HoleEntryView: View {
                     store.data.rounds[ri].currentHole = store.data.rounds[ri].holes[i].hole
                 }
             }
+            .onChange(of: store.data.rounds.first { $0.id == roundID }?.currentHole) { _, h in
+                // Follow the hole you picked on the watch.
+                guard let h, let r = store.data.rounds.first(where: { $0.id == roundID }),
+                      let i = r.holes.firstIndex(where: { $0.hole == h }), i != index else { return }
+                index = i
+            }
             .onDisappear { location.stop() }
             .confirmationDialog("Finish this round?", isPresented: $confirmFinish, titleVisibility: .visible) {
                 Button("Finish round") {
