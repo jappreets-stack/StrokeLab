@@ -30,6 +30,7 @@ struct PlayView: View {
             .sheet(isPresented: $showStart) {
                 StartRoundView { type, warmUp in
                     playing = store.startRound(type, warmUp: warmUp)
+                    PhoneSync.shared.startOnWatch()
                     showStart = false
                 }
             }

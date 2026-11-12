@@ -5,6 +5,7 @@ import Observation
 /// when you raise your wrist, and the GPS stays on. The round is saved to Apple Fitness when you end it.
 @Observable
 final class GolfWorkout: NSObject, HKWorkoutSessionDelegate, HKLiveWorkoutBuilderDelegate {
+    static let shared = GolfWorkout()
     var running = false
     var started: Date?
     var calories: Double = 0
@@ -15,10 +16,13 @@ final class GolfWorkout: NSObject, HKWorkoutSessionDelegate, HKLiveWorkoutBuilde
     @ObservationIgnored private var builder: HKLiveWorkoutBuilder?
 
     func start() async {
+        guard !running, session == nil else { return }
         guard HKHealthStore.isHealthDataAvailable() else { error = "Health isn't available on this watch."; return }
         do {
-            try await store.requestAuthorization(toShare: [HKQuantityType.workoutType()],
-                                                 read: [HKQuantityType(.activeEnergyBurned), HKQuantityType(.heartRate)])
+            // Saved as a Golf workout in Apple Fitness, with heart rate, calories and distance walked.
+            let samples: Set<HKSampleType> = [HKQuantityType(.activeEnergyBurned), HKQuantityType(.heartRate),
+                                              HKQuantityType(.distanceWalkingRunning)]
+            try await store.requestAuthorization(toShare: samples.union([HKQuantityType.workoutType()]), read: samples)
             let config = HKWorkoutConfiguration()
             config.activityType = .golf
             config.locationType = .outdoor

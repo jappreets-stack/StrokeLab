@@ -1,11 +1,22 @@
 import SwiftUI
 import CoreLocation
+import HealthKit
 import Observation
+import WatchKit
 
 @main
 struct StrokeLabWatchApp: App {
+    @WKApplicationDelegateAdaptor private var delegate: WatchAppDelegate
     var body: some Scene {
         WindowGroup { WatchHoleView() }
+    }
+}
+
+/// Starting a round on the iPhone opens StrokeLab here and starts the golf workout.
+final class WatchAppDelegate: NSObject, WKApplicationDelegate {
+    func applicationDidFinishLaunching() { _ = WatchRound.shared }
+    func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
+        Task { await GolfWorkout.shared.start() }
     }
 }
 
@@ -41,44 +52,61 @@ final class WatchLocation {
 }
 
 struct WatchHoleView: View {
-    @AppStorage("watchHole") private var hole = 1
+    private let rounds = WatchRound.shared
+    private let workout = GolfWorkout.shared
     @State private var gps = WatchLocation()
-    @State private var crown = 1.0
-    @State private var workout = GolfWorkout()
-    @State private var confirmEnd = false
+    @State private var showScore = false
     @Environment(\.scenePhase) private var phase
 
+    private var hole: Int { rounds.hole }
     private var h: Hole { Course.hole(hole) }
     private var pins: GreenPins { CourseGreens.pins[hole - 1] }
 
     var body: some View {
-        if workout.running { holeScreen } else { startScreen }
+        Group {
+            if rounds.round != nil { holeScreen } else { startScreen }
+        }
+        .onAppear { gps.start(); keepWorkoutGoing() }
+        .onChange(of: phase) { _, p in if p == .active { gps.start(); keepWorkoutGoing() } }
+        .onChange(of: rounds.round?.id) { old, new in
+            if new == nil, old != nil { Task { await workout.end() } }   // ended here or on the iPhone
+            else { keepWorkoutGoing() }
+        }
     }
 
-    /// Before the round: one button. Starting the golf workout keeps StrokeLab on screen all round.
+    /// While a round is on, the golf workout runs so StrokeLab stays on screen.
+    private func keepWorkoutGoing() {
+        if rounds.round != nil, !workout.running { Task { await workout.start() } }
+    }
+
     private var startScreen: some View {
         ScrollView {
-        VStack(spacing: 10) {
-            Image(systemName: "flag.fill").font(.title).foregroundStyle(.green)
-            Text("Hole \(hole)").font(.headline)
-            Button {
-                Task { await workout.start() }
-            } label: {
-                Text("Start round").font(.headline).frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent).tint(.green)
-            if let e = workout.error {
-                Text(e).font(.caption2).foregroundStyle(.orange).multilineTextAlignment(.center)
-                    .lineLimit(nil).fixedSize(horizontal: false, vertical: true)
-            }
-            else {
-                Text("Keeps yardages on screen all round")
-                    .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Image(systemName: "flag.fill").font(.title2).foregroundStyle(.green)
+                ForEach(RoundType.allCases, id: \.self) { t in
+                    Button { rounds.start(t) } label: {
+                        Text(t.rawValue).font(.headline).frame(maxWidth: .infinity, minHeight: 36)
+                    }
+                    .buttonStyle(.borderedProminent).tint(.green)
+                }
+                Text(workout.error ?? "Starts a Golf workout in Apple Fitness and keeps yardages on screen. Shows up on your iPhone too.")
+                    .font(.caption2).foregroundStyle(workout.error == nil ? Color.secondary : Color.orange)
+                    .multilineTextAlignment(.center)
                     .lineLimit(nil).fixedSize(horizontal: false, vertical: true)
             }
         }
-        }
-        .onAppear { gps.start() }
+    }
+
+    private var planLine: String {
+        guard let p = rounds.plan(hole) else { return "" }
+        var parts = ["\(p.teeClub.rawValue) · aim \(p.target)"]
+        if p.troubleSide != .none || !p.hazards.isEmpty { parts.append(p.troubleText) }
+        return parts.joined(separator: " · ")
+    }
+
+    private var scoreLabel: String {
+        guard let s = rounds.score(hole), let score = s.score else { return "Score" }
+        return s.putts.map { "\(score) · \($0)p" } ?? "\(score)"
     }
 
     private var holeScreen: some View {
@@ -88,10 +116,13 @@ struct WatchHoleView: View {
                 Spacer()
                 Text("Par \(h.par)").font(.headline).foregroundStyle(.green)
             }
-            .onLongPressGesture { confirmEnd = true }
+            if !planLine.isEmpty {
+                Text(planLine).font(.caption2).foregroundStyle(.secondary)
+                    .lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity, alignment: .leading)
+            }
             Spacer(minLength: 0)
             Text(text(gps.yards(to: pins.center)))
-                .font(.system(size: 64, weight: .heavy, design: .rounded))
+                .font(.system(size: 60, weight: .heavy, design: .rounded))
                 .monospacedDigit()
                 .minimumScaleFactor(0.6)
             Text("CENTER" + (gps.accuracyYards.map { " · ±\($0)" } ?? " · GPS…"))
@@ -102,34 +133,20 @@ struct WatchHoleView: View {
                 small(text(gps.yards(to: pins.back)), "BACK")
             }
             Spacer(minLength: 0)
-            HStack {
-                Button { change(-1) } label: { Image(systemName: "chevron.left") }
+            HStack(spacing: 4) {
+                Button { rounds.go(to: hole - 1) } label: { Image(systemName: "chevron.left").frame(maxWidth: 30) }
                     .disabled(hole == 1)
-                Button { confirmEnd = true } label: { Image(systemName: "stop.fill").foregroundStyle(.red) }
-                    .frame(maxWidth: .infinity)
-                Button { change(1) } label: { Image(systemName: "chevron.right") }
+                Button { showScore = true } label: {
+                    Text(scoreLabel).font(.headline).lineLimit(1).frame(maxWidth: .infinity)
+                }
+                .tint(rounds.score(hole)?.score == nil ? .green : .gray)
+                Button { rounds.go(to: hole + 1) } label: { Image(systemName: "chevron.right").frame(maxWidth: 30) }
                     .disabled(hole == 18)
             }
             .buttonStyle(.bordered)
         }
         .padding(.horizontal, 4)
-        .focusable()
-        .digitalCrownRotation($crown, from: 1, through: 18, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
-        .onChange(of: crown) { _, v in
-            let n = Int(v.rounded())
-            if n != hole { hole = n }
-        }
-        .onAppear { crown = Double(hole); gps.start() }
-        .confirmationDialog("End round?", isPresented: $confirmEnd) {
-            Button("End round", role: .destructive) { Task { await workout.end(); hole = 1; crown = 1 } }
-            Button("Keep playing", role: .cancel) {}
-        } message: { Text("Saves the round to Apple Fitness and lets the watch go back to the clock.") }
-        .onChange(of: phase) { _, p in if p == .active { gps.start() } }
-    }
-
-    private func change(_ d: Int) {
-        hole = min(18, max(1, hole + d))
-        crown = Double(hole)
+        .sheet(isPresented: $showScore) { WatchScoreView(close: { showScore = false }) }
     }
 
     private func text(_ y: Int?) -> String {
@@ -141,6 +158,71 @@ struct WatchHoleView: View {
         VStack(spacing: 0) {
             Text(v).font(.title3.weight(.bold)).monospacedDigit()
             Text(label).font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Score and putts for this hole: big buttons, one tap each.
+struct WatchScoreView: View {
+    let close: () -> Void
+    private let rounds = WatchRound.shared
+    @State private var confirmEnd = false
+
+    private var hole: Int { rounds.hole }
+    private var par: Int { Course.hole(hole).par }
+    private var current: HoleScore? { rounds.score(hole) }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Hole \(hole) · Par \(par)").font(.headline)
+                    Spacer()
+                    if let r = rounds.round, !r.entered.isEmpty {
+                        Text(toParText(r.toPar)).font(.headline).foregroundStyle(.green)
+                    }
+                }
+                label("SCORE")
+                grid(Array(2...9), columns: 4, selected: current?.score) { n in
+                    rounds.set(score: n, putts: current?.putts)
+                }
+                label("PUTTS")
+                grid(Array(0...4), columns: 5, selected: current?.putts) { n in
+                    rounds.set(score: current?.score, putts: n)
+                }
+                if hole < 18 {
+                    Button {
+                        rounds.go(to: hole + 1); close()
+                    } label: {
+                        Label("Next hole", systemImage: "chevron.right").frame(maxWidth: .infinity, minHeight: 34)
+                    }
+                    .buttonStyle(.borderedProminent).tint(.green)
+                }
+                Button("Done", action: close).buttonStyle(.bordered)
+                Button("End round", role: .destructive) { confirmEnd = true }
+                    .buttonStyle(.bordered).padding(.top, 8)
+            }
+        }
+        .confirmationDialog("End round?", isPresented: $confirmEnd) {
+            Button("End round", role: .destructive) { close(); rounds.end() }
+            Button("Keep playing", role: .cancel) {}
+        } message: { Text("Saves the round on your iPhone and the golf workout in Apple Fitness.") }
+    }
+
+    private func label(_ t: String) -> some View {
+        Text(t).font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func grid(_ values: [Int], columns: Int, selected: Int?, tap: @escaping (Int) -> Void) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: columns), spacing: 4) {
+            ForEach(values, id: \.self) { n in
+                Button { tap(n) } label: {
+                    Text("\(n)").font(.title3.weight(.bold)).frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(selected == n ? .green : Color.gray.opacity(0.35))
+            }
         }
     }
 }

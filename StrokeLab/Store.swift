@@ -24,6 +24,7 @@ final class Store {
     private func save() {
         guard let raw = try? JSONEncoder.app.encode(data) else { return }
         try? raw.write(to: Self.fileURL, options: .atomic)
+        PhoneSync.shared.push(data)
     }
 
     // MARK: Plans & pins
@@ -58,6 +59,40 @@ final class Store {
             data.rounds[i].finished = true
         }
         data.currentRoundID = nil
+    }
+
+    /// Something you did on the watch: started a round, entered a score, changed hole, ended the round.
+    func apply(_ e: WatchEvent) {
+        switch e.kind {
+        case .start(let r):
+            guard index(of: r.id) == nil else { return }
+            if let cur = data.currentRoundID, let i = index(of: cur), cur != r.id {
+                if data.rounds[i].entered.isEmpty { data.rounds.remove(at: i) } else { data.rounds[i].finished = true }
+            }
+            var round = r
+            for i in round.holes.indices where round.holes[i].teeClub == nil {
+                round.holes[i].teeClub = plan(round.holes[i].hole).teeClub
+            }
+            data.rounds.insert(round, at: 0)
+            data.currentRoundID = round.id
+        case .score(let id, let hole, let score, let putts):
+            guard let ri = index(of: id) else { return }
+            if let hi = data.rounds[ri].holes.firstIndex(where: { $0.hole == hole }) {
+                data.rounds[ri].holes[hi].score = score
+                data.rounds[ri].holes[hi].putts = putts
+            } else {
+                var h = HoleScore(hole: hole, score: score, putts: putts)
+                h.teeClub = plan(hole).teeClub
+                data.rounds[ri].holes.append(h)
+                data.rounds[ri].holes.sort { $0.hole < $1.hole }
+            }
+        case .hole(let id, let hole):
+            guard let ri = index(of: id) else { return }
+            data.rounds[ri].currentHole = hole
+        case .end(let id):
+            if data.currentRoundID == id { finishCurrentRound() }
+            else if let ri = index(of: id) { data.rounds[ri].finished = true }
+        }
     }
 
     func delete(_ id: UUID) {
@@ -153,22 +188,5 @@ final class Store {
                                 note: "Short hole: hybrid in play, then a wedge to the center. Par chance.")
             }
         }
-    }
-}
-
-extension JSONEncoder {
-    static var app: JSONEncoder {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
-        e.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return e
-    }
-}
-
-extension JSONDecoder {
-    static var app: JSONDecoder {
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
-        return d
     }
 }

@@ -13,6 +13,7 @@ struct StrokeLabApp: App {
                 .environment(location)
                 .environment(swings)
                 .tint(.fairway)
+                .task { PhoneSync.shared.activate(store) }
         }
     }
 }

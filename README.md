@@ -2,7 +2,7 @@
 
 # StrokeLab
 
-A private golf stats app for iPhone (Apple Watch coming next), built in SwiftUI for one golfer and one home course.
+A private golf stats app for iPhone and Apple Watch, built in SwiftUI for one golfer and one home course.
 The goal is simple: find out exactly where strokes go, with entry fast enough to use one-handed on the course.
 
 ## Features (Round 1 — iPhone)
@@ -28,12 +28,13 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 - Phases come from the hand path: top = highest hands before the fastest point, impact = lowest hands after it, takeaway = where the hands were last still.
 - Distances are scaled from your torso length in the video (≈19"), so they're estimates; the camera angle (down-the-line vs face-on) is detected from how wide your shoulders look.
 
-### Apple Watch (first version)
-- Front / center / back yards from the watch's own GPS, hole and par; Digital Crown or arrows to change holes.
-- Each round runs as a HealthKit golf workout, so the yardages stay on screen on every wrist raise and the round lands in Apple Fitness.
+### Apple Watch
+- Play a whole round without the phone: front / center / back yards from the watch's own GPS, the hole plan (club, target, trouble), and big glove-friendly buttons for score and putts.
+- Holes change with arrow buttons only (no Digital Crown, so a glove can't flip holes by accident).
+- Each round runs as a HealthKit Golf workout (heart rate, calories, distance), so the yardages stay on screen on every wrist raise and the round lands in Apple Fitness.
+- Start a round on either device and the other picks it up (WatchConnectivity; starting on the iPhone opens the watch app and its workout). Scores tapped on the watch land in the phone's round.
 
 ## Roadmap
-- Apple Watch: hole plan, score + putts with the Digital Crown, sync with the phone.
 - Dashboard: average vs par by hole, worst holes, blow-ups, penalties & one-ball rounds, putting, front vs back, 10-round trend.
 - Practice log: wedge carries by club and swing (easy / hard / all-out), 9-ball up-and-down drill.
 
