@@ -5,6 +5,7 @@ nonisolated struct WatchSnapshot: Codable, Sendable {
     var round: Round?
     var plans: [HolePlan]
     var finishedIDs: [UUID]
+    var clubYards: [String: Int]?
 }
 
 /// Something done on the watch, sent to the iPhone.
@@ -15,6 +16,7 @@ nonisolated struct WatchEvent: Codable, Sendable {
         case hole(round: UUID, hole: Int)
         case tee(round: UUID, hole: Int, result: TeeResult?, miss: MissSize?)
         case end(round: UUID)
+        case entry(round: UUID, hole: HoleScore)   // everything you entered for one hole
     }
     var kind: Kind
     var at = Date()

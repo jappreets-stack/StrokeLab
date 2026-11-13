@@ -67,6 +67,7 @@ struct WatchHoleView: View {
             if rounds.round != nil { holeScreen } else { startScreen }
         }
         .onAppear { gps.start(); keepWorkoutGoing() }
+        .task(id: rounds.hole) { await WindModel.shared.refresh() }
         .onChange(of: phase) { _, p in if p == .active { gps.start(); keepWorkoutGoing() } }
         .onChange(of: rounds.round?.id) { old, new in
             if new == nil, old != nil { Task { await workout.end() } }   // ended here or on the iPhone
@@ -122,11 +123,21 @@ struct WatchHoleView: View {
             }
             Spacer(minLength: 0)
             Text(text(gps.yards(to: pins.center)))
-                .font(.system(size: 60, weight: .heavy, design: .rounded))
+                .font(.system(size: 56, weight: .heavy, design: .rounded))
                 .monospacedDigit()
                 .minimumScaleFactor(0.6)
             Text("CENTER" + (gps.accuracyYards.map { " · ±\($0)" } ?? " · GPS…"))
                 .font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+            if let a = ShotAdvice.make(from: gps.location, to: pins.center, wind: WindModel.shared.wind, clubs: rounds.clubYards) {
+                HStack(spacing: 3) {
+                    if let deg = a.arrow, a.windText != "Calm" {
+                        Image(systemName: "location.north.fill").rotationEffect(.degrees(deg))
+                    }
+                    Text([a.windText, "\(a.playsLike)", a.club?.rawValue].compactMap { $0 }.joined(separator: " · "))
+                }
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.green)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            }
             HStack {
                 small(text(gps.yards(to: pins.front)), "FRONT")
                 Spacer()
@@ -162,7 +173,7 @@ struct WatchHoleView: View {
     }
 }
 
-/// Score and putts for this hole: big buttons, one tap each.
+/// Everything for this hole, same buttons as the iPhone. Big targets, one tap each.
 struct WatchScoreView: View {
     let close: () -> Void
     private let rounds = WatchRound.shared
@@ -170,7 +181,7 @@ struct WatchScoreView: View {
 
     private var hole: Int { rounds.hole }
     private var par: Int { Course.hole(hole).par }
-    private var current: HoleScore? { rounds.score(hole) }
+    private var e: HoleScore { rounds.score(hole) ?? HoleScore(hole: hole) }
 
     var body: some View {
         ScrollView {
@@ -182,28 +193,26 @@ struct WatchScoreView: View {
                         Text(toParText(r.toPar)).font(.headline).foregroundStyle(.green)
                     }
                 }
-                label("SCORE")
-                grid(Array(2...9), columns: 4, selected: current?.score) { n in
-                    rounds.set(score: n, putts: current?.putts)
+                row("SCORE", Array(max(1, par - 1)...(par + 6)), { "\($0)" }, e.score, cols: 4, big: true) { v in rounds.update { $0.score = v } }
+                row("PUTTS", [0, 1, 2, 3, 4], { "\($0)" }, e.putts, cols: 5, big: true) { v in rounds.update { $0.putts = v } }
+                row("TEE SHOT", TeeResult.options(par: par), \.rawValue, e.teeResult, cols: 2) { v in rounds.update { $0.teeResult = v } }
+                if e.teeMissed {
+                    row("HOW FAR OFF?", MissSize.allCases, \.label, e.missSize, cols: 3) { v in rounds.update { $0.missSize = v } }
                 }
-                label("PUTTS")
-                grid(Array(0...4), columns: 5, selected: current?.putts) { n in
-                    rounds.set(score: current?.score, putts: n)
-                }
-                label("TEE SHOT")
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)], spacing: 4) {
-                    ForEach(TeeResult.options(par: par), id: \.self) { t in
-                        choice(t.rawValue, current?.teeResult == t) { rounds.set(tee: t, miss: current?.missSize) }
+                if (e.putts ?? 0) > 0 {
+                    row("FIRST PUTT (FT)", PuttLength.allCases, \.rawValue, e.firstPutt, cols: 3) { v in rounds.update { $0.firstPutt = v } }
+                    row("FIRST PUTT", PuttResult.allCases, \.rawValue, e.firstPuttResult ?? (e.putts == 1 ? .made : nil), cols: 3) { v in
+                        rounds.update { $0.firstPuttResult = v }
+                    }
+                    if let r = e.firstPuttResult, r != .made {
+                        row("FINISHED", PuttMiss.allCases, \.rawValue, e.puttMiss, cols: 3) { v in rounds.update { $0.puttMiss = v } }
                     }
                 }
-                if current?.teeMissed == true {
-                    label("HOW FAR OFF?")
-                    HStack(spacing: 4) {
-                        ForEach(MissSize.allCases, id: \.self) { m in
-                            choice(m.rawValue, current?.missSize == m) { rounds.set(tee: current?.teeResult, miss: m) }
-                        }
-                    }
-                }
+                row("GREENSIDE BUNKER", [false, true], { $0 ? "Yes" : "No" }, e.sand, cols: 2) { v in rounds.update { $0.sand = v } }
+                row("PENALTIES", [0, 1, 2, 3], { "\($0)" }, e.penalties, cols: 4) { v in rounds.update { $0.penalties = v } }
+                row("LOST BALL", [false, true], { $0 ? "Yes" : "No" }, e.lostBall, cols: 2) { v in rounds.update { $0.lostBall = v } }
+                row("TEE CLUB", Club.allCases, \.rawValue, e.teeClub, cols: 4) { v in rounds.update { $0.teeClub = v } }
+
                 if hole < 18 {
                     Button {
                         rounds.go(to: hole + 1); close()
@@ -223,28 +232,21 @@ struct WatchScoreView: View {
         } message: { Text("Saves the round on your iPhone and the golf workout in Apple Fitness.") }
     }
 
-    private func choice(_ title: String, _ on: Bool, tap: @escaping () -> Void) -> some View {
-        Button(action: tap) {
-            Text(title).font(.footnote.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity, minHeight: 34)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(on ? .green : Color.gray.opacity(0.35))
-    }
-
-    private func label(_ t: String) -> some View {
-        Text(t).font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func grid(_ values: [Int], columns: Int, selected: Int?, tap: @escaping (Int) -> Void) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: columns), spacing: 4) {
-            ForEach(values, id: \.self) { n in
-                Button { tap(n) } label: {
-                    Text("\(n)").font(.title3.weight(.bold)).frame(maxWidth: .infinity, minHeight: 40)
+    private func row<T: Hashable>(_ label: String, _ options: [T], _ title: @escaping (T) -> String, _ selected: T?,
+                                  cols: Int, big: Bool = false, set: @escaping (T) -> Void) -> some View {
+        VStack(spacing: 4) {
+            Text(label).font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: cols), spacing: 4) {
+                ForEach(options, id: \.self) { o in
+                    Button { set(o) } label: {
+                        Text(title(o)).font(big ? .title3.weight(.bold) : .footnote.weight(.bold))
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                            .frame(maxWidth: .infinity, minHeight: big ? 40 : 34)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(selected == o ? .green : Color.gray.opacity(0.35))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(selected == n ? .green : Color.gray.opacity(0.35))
             }
         }
     }

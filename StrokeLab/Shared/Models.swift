@@ -18,7 +18,13 @@ nonisolated enum TeeResult: String, Codable, CaseIterable, Sendable {
 
 /// How bad a missed tee shot was: a foot into the first cut is not the same as the trees.
 nonisolated enum MissSize: String, Codable, CaseIterable, Sendable {
-    case justOff = "Just off", trouble = "In trouble"
+    case justOff = "Just off", rough = "Rough", trouble = "In trouble"
+    var label: String { self == .trouble ? "Trouble" : rawValue }
+}
+
+/// How far the first putt finished from the hole when it missed.
+nonisolated enum PuttMiss: String, Codable, CaseIterable, Sendable {
+    case tapIn = "Tap-in", close = "3–6 ft", far = "6+ ft"
 }
 
 nonisolated enum TroubleSide: String, Codable, CaseIterable, Sendable {
@@ -118,6 +124,8 @@ nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
     var upDownOverride: UpDown?     // nil = work it out
     var firstPutt: PuttLength?      // length of the first putt
     var firstPuttResult: PuttResult? // how the first putt finished
+    var puttMiss: PuttMiss?         // how far it finished from the hole
+    var sand: Bool?                 // were you in a greenside bunker
     var prefilled: Bool?            // true until you change anything on this hole
     var id: Int { hole }
     var teeMissed: Bool { teeResult != nil && teeResult != .fairway && teeResult != .green }
@@ -173,6 +181,7 @@ nonisolated struct AppData: Codable, Sendable {
     var pins: [GreenPins]
     var rounds: [Round] = []
     var currentRoundID: UUID?
+    var clubYards: [String: Int]?   // nil = ClubYards.defaults
 }
 
 func toParText(_ n: Int) -> String { n == 0 ? "E" : (n > 0 ? "+\(n)" : "\(n)") }

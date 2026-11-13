@@ -6,6 +6,11 @@ struct CourseView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    NavigationLink { ClubYardsView() } label: {
+                        Label("My club distances", systemImage: "ruler")
+                    }
+                } footer: { Text("Used with the wind to pick a club for the yardage.") }
                 section("Front nine", 1...9)
                 section("Back nine", 10...18)
             }
@@ -91,5 +96,32 @@ struct HolePlanEditor: View {
         .navigationTitle("Hole \(hole) · Par \(h.par) · \(h.yards) yds")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $showMap) { HoleMapView(hole: hole) }
+    }
+}
+
+/// Carry yards per club. The watch and phone use these with the wind to suggest a club.
+struct ClubYardsView: View {
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(Club.allCases) { c in
+                    let y = store.clubYards[c.rawValue] ?? 0
+                    Stepper(value: Binding(get: { y }, set: { v in
+                        var t = store.clubYards; t[c.rawValue] = v; store.data.clubYards = t
+                    }), in: 30...320, step: 1) {
+                        HStack {
+                            Text(c.rawValue).font(.headline).frame(width: 60, alignment: .leading)
+                            Text("\(y) yds").monospacedDigit()
+                        }
+                    }
+                }
+            } footer: {
+                Text("Your normal carry, not your best one. Into the wind adds about 1% per mph; a helping wind takes off about half that.")
+            }
+            Section { Button("Reset to defaults", role: .destructive) { store.data.clubYards = nil } }
+        }
+        .navigationTitle("Club distances")
     }
 }

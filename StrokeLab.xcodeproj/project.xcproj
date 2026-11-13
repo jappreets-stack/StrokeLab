@@ -25,6 +25,7 @@
             "Shared/CourseGreens.swift",
             "Shared/Models.swift",
             "Shared/Sync.swift",
+            "Shared/Wind.swift",
           ],
         },
       ],

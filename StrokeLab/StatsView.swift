@@ -210,7 +210,8 @@ struct StatsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("What the miss cost you (avg vs par)").font(.subheadline.weight(.semibold))
                         costRow("Fairway", s.tee.costFairway, .fairway)
-                        costRow("Just off", s.tee.costJustOff, .orange)
+                        costRow("Just off", s.tee.costJustOff, .yellow)
+                        costRow("Rough", s.tee.costRough, .orange)
                         costRow("In trouble", s.tee.costTrouble, .red)
                         if s.tee.unsized > 0 {
                             Text("\(s.tee.unsized) miss\(s.tee.unsized == 1 ? "" : "es") not marked “just off” or “in trouble” yet. Mark them in the round to sharpen this.")
@@ -297,6 +298,10 @@ struct StatsView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    if !s.puttMisses.isEmpty {
+                        Text("Missed first putts finished: " + s.puttMisses.map { "\($0.0) \($0.1)" }.joined(separator: " · "))
+                            .font(.callout)
+                    }
                     if let t = s.puttTendency { Text(LocalizedStringKey(t)).font(.callout) }
                 }
             }
@@ -309,11 +314,16 @@ struct StatsView: View {
 
     private func shortGameCard(_ s: StatsModel) -> some View {
         Card(title: "Greens, chips & trouble", icon: "leaf.fill") {
-            HStack(spacing: 10) {
-                Tile(value: s.girPct.map { "\($0)%" } ?? "—", label: "Greens in reg")
-                Tile(value: s.upDown.map { "\($0.made)/\($0.tries)" } ?? "—", label: "Up & downs")
-                Tile(value: String(format: "%.1f", s.penaltiesPerNine), label: "Penalties / 9",
-                     color: s.penaltiesPerNine > 0.5 ? .red : .fairway)
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    Tile(value: s.girPct.map { "\($0)%" } ?? "—", label: "Greens in reg")
+                    Tile(value: s.upDown.map { "\($0.made)/\($0.tries)" } ?? "—", label: "Up & downs")
+                }
+                HStack(spacing: 10) {
+                    Tile(value: s.sandSaves.map { "\($0.made)/\($0.tries)" } ?? "—", label: "Sand saves")
+                    Tile(value: String(format: "%.1f", s.penaltiesPerNine), label: "Penalties / 9",
+                         color: s.penaltiesPerNine > 0.5 ? .red : .fairway)
+                }
             }
         }
     }
@@ -385,6 +395,7 @@ struct StatsModel {
         var costFairway: (avg: Double, n: Int)?
         var costJustOff: (avg: Double, n: Int)?
         var costTrouble: (avg: Double, n: Int)?
+        var costRough: (avg: Double, n: Int)?
     }
     struct Par3 { var played = 0, green = 0; var avgOver: Double?; var misses: [(String, Int)] = [] }
 
@@ -403,6 +414,8 @@ struct StatsModel {
     var puttsPerNine: Double?
     var girPct: Int?
     var upDown: (made: Int, tries: Int)?
+    var sandSaves: (made: Int, tries: Int)?
+    var puttMisses: [(String, Int)] = []
     var penaltiesPerNine = 0.0
     var blowUpsPerNine = 0.0
     var warmCompare: (warm: Double?, cold: Double?, firstThreeText: String)?
@@ -472,6 +485,7 @@ struct StatsModel {
         tee.unsized = long.filter { $0.teeMissed && $0.missSize == nil }.count
         tee.costFairway = avgOver(long.filter { $0.teeResult == .fairway })
         tee.costJustOff = avgOver(long.filter { $0.teeMissed && $0.missSize == .justOff })
+        tee.costRough = avgOver(long.filter { $0.teeMissed && $0.missSize == .rough })
         tee.costTrouble = avgOver(long.filter { $0.teeMissed && $0.missSize == .trouble })
 
         // Par 3s.
@@ -523,6 +537,12 @@ struct StatsModel {
         if !gir.isEmpty { girPct = Int((Double(gir.filter { $0 }.count) / Double(gir.count) * 100).rounded()) }
         let ud = entries.map(\.upDown).filter { $0 != .notAttempted }
         if !ud.isEmpty { upDown = (ud.filter { $0 == .made }.count, ud.count) }
+        puttMisses = PuttMiss.allCases.compactMap { m in
+            let n = entries.filter { $0.puttMiss == m }.count
+            return n > 0 ? (m.rawValue.lowercased(), n) : nil
+        }
+        let sand = entries.filter { $0.sand == true }
+        if !sand.isEmpty { sandSaves = (sand.filter { ($0.score ?? 99) <= $0.par }.count, sand.count) }
         penaltiesPerNine = Double(entries.map(\.penalties).reduce(0, +)) / ninesPlayed
 
         // Warm-up.

@@ -22,7 +22,7 @@ final class PhoneSync: NSObject, WCSessionDelegate {
         guard s.activationState == .activated, s.isPaired, s.isWatchAppInstalled else { return }
         let current = d.currentRoundID.flatMap { id in d.rounds.first { $0.id == id } }
         let finished = d.rounds.filter(\.finished).sorted { $0.date > $1.date }.prefix(5).map(\.id)
-        let snap = WatchSnapshot(round: current, plans: d.plans, finishedIDs: Array(finished))
+        let snap = WatchSnapshot(round: current, plans: d.plans, finishedIDs: Array(finished), clubYards: d.clubYards)
         guard let raw = try? JSONEncoder.app.encode(snap) else { return }
         try? s.updateApplicationContext(["snapshot": raw])
     }
@@ -63,6 +63,7 @@ final class PhoneSync: NSObject, WCSessionDelegate {
             case .hole(let id, _): key = "hole-\(id)"
             case .tee(let id, let hole, _, _): key = "tee-\(id)-\(hole)"
             case .end(let id): key = "end-\(id)"
+            case .entry(let id, let h): key = "score-\(id)-\(h.hole)"
             }
             if let last = self.lastApplied[key], last >= e.at { return }
             self.lastApplied[key] = e.at

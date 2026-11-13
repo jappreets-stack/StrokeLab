@@ -30,6 +30,7 @@ final class Store {
     // MARK: Plans & pins
 
     func plan(_ hole: Int) -> HolePlan { data.plans[hole - 1] }
+    var clubYards: [String: Int] { data.clubYards ?? ClubYards.defaults }
     func pins(_ hole: Int) -> GreenPins { data.pins[hole - 1] }
 
     // MARK: Rounds
@@ -91,6 +92,19 @@ final class Store {
                   let hi = data.rounds[ri].holes.firstIndex(where: { $0.hole == hole }) else { return }
             data.rounds[ri].holes[hi].teeResult = result
             data.rounds[ri].holes[hi].missSize = miss
+        case .entry(let id, let e):
+            guard let ri = index(of: id) else { return }
+            if let hi = data.rounds[ri].holes.firstIndex(where: { $0.hole == e.hole }) {
+                var h = data.rounds[ri].holes[hi]
+                h.score = e.score; h.putts = e.putts; h.teeClub = e.teeClub
+                h.teeResult = e.teeResult; h.missSize = e.missSize
+                h.penalties = e.penalties; h.lostBall = e.lostBall; h.sand = e.sand
+                h.firstPutt = e.firstPutt; h.firstPuttResult = e.firstPuttResult; h.puttMiss = e.puttMiss
+                data.rounds[ri].holes[hi] = h
+            } else {
+                data.rounds[ri].holes.append(e)
+                data.rounds[ri].holes.sort { $0.hole < $1.hole }
+            }
         case .hole(let id, let hole):
             guard let ri = index(of: id) else { return }
             data.rounds[ri].currentHole = hole

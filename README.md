@@ -29,7 +29,8 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 - Distances are scaled from your torso length in the video (≈19"), so they're estimates; the camera angle (down-the-line vs face-on) is detected from how wide your shoulders look.
 
 ### Apple Watch
-- Play a whole round without the phone: front / center / back yards from the watch's own GPS, the hole plan (club, target, trouble), and big glove-friendly buttons for score and putts.
+- Play a whole round without the phone: front / center / back yards from the watch's own GPS, the hole plan (club, target, trouble), and the same scoring buttons as the iPhone (score, putts, tee shot + how far off, first putt length / result / how far it finished, greenside bunker, penalties, lost ball, tee club), sized for gloves.
+- Wind-adjusted club: current wind at the course (Open-Meteo, course coordinates only), split into into/helping/cross for the shot to the green, a plays-like yardage, and the club from your own carry distances.
 - Holes change with arrow buttons only (no Digital Crown, so a glove can't flip holes by accident).
 - Each round runs as a HealthKit Golf workout (heart rate, calories, distance), so the yardages stay on screen on every wrist raise and the round lands in Apple Fitness.
 - Start a round on either device and the other picks it up (WatchConnectivity; starting on the iPhone opens the watch app and its workout). Scores tapped on the watch land in the phone's round.

@@ -10,6 +10,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
     var round: Round? { didSet { save() } }
     var plans: [HolePlan] = [] { didSet { save() } }
     var hole = 1 { didSet { save() } }
+    var clubYards: [String: Int] = ClubYards.defaults { didSet { save() } }
 
     /// Scores tapped here that the iPhone hasn't confirmed yet (so a late update can't undo them).
     @ObservationIgnored private var pending: [Int: HoleScore] = [:]
@@ -22,6 +23,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
         if let raw = d.data(forKey: "round") { round = try? JSONDecoder.app.decode(Round.self, from: raw) }
         if let raw = d.data(forKey: "plans"), let p = try? JSONDecoder.app.decode([HolePlan].self, from: raw), p.count == 18 { plans = p }
         hole = max(1, min(18, d.integer(forKey: "hole")))
+        if let raw = d.data(forKey: "clubs"), let c = try? JSONDecoder.app.decode([String: Int].self, from: raw) { clubYards = c }
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()
@@ -33,6 +35,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
         d.set(round.flatMap { try? JSONEncoder.app.encode($0) }, forKey: "round")
         d.set(try? JSONEncoder.app.encode(plans), forKey: "plans")
         d.set(hole, forKey: "hole")
+        d.set(try? JSONEncoder.app.encode(clubYards), forKey: "clubs")
     }
 
     func plan(_ n: Int) -> HolePlan? { plans.first { $0.hole == n } }
@@ -59,32 +62,21 @@ final class WatchRound: NSObject, WCSessionDelegate {
         send(.hole(round: r.id, hole: hole))
     }
 
-    func set(score: Int?, putts: Int?) {
+    /// Change anything about the current hole; the iPhone gets the whole hole.
+    func update(_ change: (inout HoleScore) -> Void) {
         guard var r = round else { return }
-        if let i = r.holes.firstIndex(where: { $0.hole == hole }) {
-            r.holes[i].score = score
-            r.holes[i].putts = putts
-        } else {
-            r.holes.append(HoleScore(hole: hole, score: score, putts: putts))
-            r.holes.sort { $0.hole < $1.hole }
-        }
-        round = r
-        pending[hole] = r.holes.first { $0.hole == hole }
-        send(.score(round: r.id, hole: hole, score: score, putts: putts))
-    }
-
-    func set(tee: TeeResult?, miss: MissSize?) {
-        guard var r = round else { return }
-        if r.holes.firstIndex(where: { $0.hole == hole }) == nil {
-            r.holes.append(HoleScore(hole: hole)); r.holes.sort { $0.hole < $1.hole }
+        if !r.holes.contains(where: { $0.hole == hole }) {
+            var h = HoleScore(hole: hole)
+            h.teeClub = plan(hole)?.teeClub
+            r.holes.append(h); r.holes.sort { $0.hole < $1.hole }
         }
         let i = r.holes.firstIndex { $0.hole == hole }!
-        r.holes[i].teeResult = tee
-        r.holes[i].missSize = r.holes[i].teeMissed ? miss : nil
+        change(&r.holes[i])
+        if !r.holes[i].teeMissed { r.holes[i].missSize = nil }
+        if r.holes[i].firstPuttResult == nil || r.holes[i].firstPuttResult == .made { r.holes[i].puttMiss = nil }
         round = r
         pending[hole] = r.holes[i]
-        send(.score(round: r.id, hole: hole, score: r.holes[i].score, putts: r.holes[i].putts))
-        send(.tee(round: r.id, hole: hole, result: r.holes[i].teeResult, miss: r.holes[i].missSize))
+        send(.entry(round: r.id, hole: r.holes[i]))
     }
 
     func end() {
@@ -109,6 +101,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
 
     private func apply(_ snap: WatchSnapshot) {
         if snap.plans.count == 18 { plans = snap.plans }
+        clubYards = snap.clubYards ?? ClubYards.defaults
         if let r = round, snap.finishedIDs.contains(r.id) {
             round = nil; pending = [:]; hole = 1
             return
@@ -118,13 +111,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
             // Same round: take the phone's copy, but keep scores tapped here that it hasn't seen yet.
             for (n, v) in pending {
                 if let i = p.holes.firstIndex(where: { $0.hole == n }) {
-                    let same = p.holes[i].score == v.score && p.holes[i].putts == v.putts
-                        && p.holes[i].teeResult == v.teeResult && p.holes[i].missSize == v.missSize
-                    if same { pending[n] = nil }
-                    else {
-                        p.holes[i].score = v.score; p.holes[i].putts = v.putts
-                        p.holes[i].teeResult = v.teeResult; p.holes[i].missSize = v.missSize
-                    }
+                    if p.holes[i] == v { pending[n] = nil } else { p.holes[i] = v }
                 }
             }
             round = p

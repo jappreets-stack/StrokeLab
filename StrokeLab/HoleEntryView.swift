@@ -176,8 +176,8 @@ private struct HoleForm: View {
                 ChoiceRow(label: "Tee shot", options: TeeResult.options(par: hole.par), title: \.rawValue,
                           value: s.teeResult, columns: hole.par == 3 ? 5 : 4)
                 if entry.teeMissed {
-                    ChoiceRow(label: "How far off?", options: MissSize.allCases, title: \.rawValue,
-                              value: s.missSize, columns: 2, height: 48)
+                    ChoiceRow(label: "How far off?", options: MissSize.allCases, title: \.label,
+                              value: s.missSize, columns: 3, height: 48)
                 }
 
                 Button { withAnimation { showMore.toggle() } } label: {
@@ -197,6 +197,8 @@ private struct HoleForm: View {
                 if showMore {
                     ChoiceRow(label: "Penalty strokes", options: [0, 1, 2, 3], title: { "\($0)" },
                               value: Binding(get: { entry.penalties }, set: { s.wrappedValue.penalties = $0 ?? 0 }))
+                    ChoiceRow(label: "Greenside bunker", options: [false, true], title: { $0 ? "Yes" : "No" },
+                              value: s.sand, columns: 2)
                     ChoiceRow(label: "Lost ball", options: [false, true], title: { $0 ? "Yes" : "No" },
                               value: Binding(get: { entry.lostBall }, set: { s.wrappedValue.lostBall = $0 ?? false }),
                               columns: 2)
@@ -209,6 +211,10 @@ private struct HoleForm: View {
                                   value: Binding(get: { entry.firstPuttResult ?? (entry.putts == 1 ? .made : nil) },
                                                  set: { s.wrappedValue.firstPuttResult = $0 }),
                                   columns: 5, height: 48)
+                        if let r = entry.firstPuttResult, r != .made {
+                            ChoiceRow(label: "Finished", hint: "(from the hole)", options: PuttMiss.allCases, title: \.rawValue,
+                                      value: s.puttMiss, columns: 3, height: 48)
+                        }
                     }
                     ChoiceRow(label: "Green in regulation",
                               hint: entry.greenOverride == nil && entry.autoGreen != nil ? "(worked out from score + putts)" : nil,
@@ -280,10 +286,13 @@ struct YardageStrip: View {
 
     var body: some View {
         if pins.center != nil {
-            HStack(spacing: 0) {
-                cell("Front", location.yards(to: pins.front))
-                cell("Center", location.yards(to: pins.center), big: true)
-                cell("Back", location.yards(to: pins.back))
+            VStack(spacing: 2) {
+                HStack(spacing: 0) {
+                    cell("Front", location.yards(to: pins.front))
+                    cell("Center", location.yards(to: pins.center), big: true)
+                    cell("Back", location.yards(to: pins.back))
+                }
+                advice
             }
             .padding(.vertical, 6)
             .overlay(alignment: .bottomTrailing) {
@@ -292,6 +301,21 @@ struct YardageStrip: View {
                 }
             }
             .background(Color.card, in: .rect(cornerRadius: 14))
+            .task { await WindModel.shared.refresh() }
+        }
+    }
+
+    @Environment(Store.self) private var store
+    @ViewBuilder private var advice: some View {
+        if let a = ShotAdvice.make(from: location.location, to: pins.center, wind: WindModel.shared.wind, clubs: store.clubYards) {
+            HStack(spacing: 4) {
+                if let deg = a.arrow, a.windText != "Calm" {
+                    Image(systemName: "location.north.fill").rotationEffect(.degrees(deg))
+                }
+                Text([a.windText, "plays \(a.playsLike)", a.club?.rawValue].compactMap { $0 }.joined(separator: " · "))
+            }
+            .font(.caption.weight(.semibold)).foregroundStyle(Color.fairway)
+            .padding(.bottom, 10)
         }
     }
 
