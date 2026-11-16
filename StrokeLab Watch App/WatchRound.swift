@@ -95,6 +95,12 @@ final class WatchRound: NSObject, WCSessionDelegate {
         hole = 1
     }
 
+    /// Deletes a past round here and on the iPhone.
+    func delete(_ id: UUID) {
+        history.removeAll { $0.id == id }
+        send(.delete(round: id))
+    }
+
     private func addToHistory(_ r: Round) {
         history = Array(([r] + history.filter { $0.id != r.id }).sorted { $0.date > $1.date }.prefix(10))
     }

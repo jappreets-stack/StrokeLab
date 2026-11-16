@@ -111,6 +111,8 @@ final class Store {
         case .end(let id):
             if data.currentRoundID == id { finishCurrentRound() }
             else if let ri = index(of: id) { data.rounds[ri].finished = true }
+        case .delete(let id):
+            delete(id)
         }
     }
 

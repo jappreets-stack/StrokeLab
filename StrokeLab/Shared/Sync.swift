@@ -17,6 +17,7 @@ nonisolated struct WatchEvent: Codable, Sendable {
         case hole(round: UUID, hole: Int)
         case tee(round: UUID, hole: Int, result: TeeResult?, miss: MissSize?)
         case end(round: UUID)
+        case delete(round: UUID)                    // past round deleted on the watch
         case entry(round: UUID, hole: HoleScore)   // everything you entered for one hole
     }
     var kind: Kind

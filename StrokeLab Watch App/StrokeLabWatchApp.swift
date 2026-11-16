@@ -263,10 +263,11 @@ struct WatchScoreView: View {
 /// Your last rounds, newest first. Tap one for its scorecard.
 struct WatchPastRounds: View {
     private let rounds = WatchRound.shared
+    @State private var toDelete: Round?
     var body: some View {
         List(rounds.history) { r in
             NavigationLink {
-                WatchScorecard(round: r, done: nil)
+                WatchScorecard(round: r, done: nil, delete: { toDelete = r })
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: 0) {
@@ -281,8 +282,21 @@ struct WatchPastRounds: View {
                     }
                 }
             }
+            .swipeActions {
+                Button(role: .destructive) { toDelete = r } label: { Label("Delete", systemImage: "trash") }
+            }
         }
         .navigationTitle("Past rounds")
+        .overlay { if rounds.history.isEmpty { Text("No rounds").foregroundStyle(.secondary) } }
+        .confirmationDialog("Delete this round?", isPresented: Binding(get: { toDelete != nil }, set: { if !$0 { toDelete = nil } })) {
+            Button("Delete", role: .destructive) {
+                if let r = toDelete { rounds.delete(r.id) }
+                toDelete = nil
+            }
+            Button("Cancel", role: .cancel) { toDelete = nil }
+        } message: {
+            Text(toDelete.map { "\($0.date.formatted(.dateTime.month(.abbreviated).day())) · \($0.total). Also deletes it on your iPhone. Can't be undone." } ?? "")
+        }
     }
 }
 
@@ -290,6 +304,8 @@ struct WatchPastRounds: View {
 struct WatchScorecard: View {
     let round: Round
     let done: (() -> Void)?
+    var delete: (() -> Void)? = nil
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
@@ -319,6 +335,12 @@ struct WatchScorecard: View {
                 if let done {
                     Button(action: done) { Text("Done").frame(maxWidth: .infinity, minHeight: 34) }
                         .buttonStyle(.borderedProminent).tint(.green)
+                }
+                if let delete {
+                    Button(role: .destructive) { dismiss(); delete() } label: {
+                        Label("Delete round", systemImage: "trash").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered).padding(.top, 8)
                 }
             }
         }
