@@ -6,6 +6,7 @@ nonisolated struct WatchSnapshot: Codable, Sendable {
     var plans: [HolePlan]
     var finishedIDs: [UUID]
     var clubYards: [String: Int]?
+    var recent: [Round]?          // last finished rounds, newest first, for the watch's Past rounds
 }
 
 /// Something done on the watch, sent to the iPhone.

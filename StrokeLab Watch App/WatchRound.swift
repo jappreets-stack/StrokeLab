@@ -11,6 +11,10 @@ final class WatchRound: NSObject, WCSessionDelegate {
     var plans: [HolePlan] = [] { didSet { save() } }
     var hole = 1 { didSet { save() } }
     var clubYards: [String: Int] = ClubYards.defaults { didSet { save() } }
+    /// Finished rounds, newest first (from the iPhone, plus any ended here it hasn't confirmed yet).
+    var history: [Round] = [] { didSet { save() } }
+    /// The round that just ended, shown as a scorecard until you close it.
+    var summary: Round?
 
     /// Scores tapped here that the iPhone hasn't confirmed yet (so a late update can't undo them).
     @ObservationIgnored private var pending: [Int: HoleScore] = [:]
@@ -24,6 +28,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
         if let raw = d.data(forKey: "plans"), let p = try? JSONDecoder.app.decode([HolePlan].self, from: raw), p.count == 18 { plans = p }
         hole = max(1, min(18, d.integer(forKey: "hole")))
         if let raw = d.data(forKey: "clubs"), let c = try? JSONDecoder.app.decode([String: Int].self, from: raw) { clubYards = c }
+        if let raw = d.data(forKey: "history"), let h = try? JSONDecoder.app.decode([Round].self, from: raw) { history = h }
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()
@@ -36,6 +41,7 @@ final class WatchRound: NSObject, WCSessionDelegate {
         d.set(try? JSONEncoder.app.encode(plans), forKey: "plans")
         d.set(hole, forKey: "hole")
         d.set(try? JSONEncoder.app.encode(clubYards), forKey: "clubs")
+        d.set(try? JSONEncoder.app.encode(history), forKey: "history")
     }
 
     func plan(_ n: Int) -> HolePlan? { plans.first { $0.hole == n } }
@@ -80,10 +86,17 @@ final class WatchRound: NSObject, WCSessionDelegate {
     }
 
     func end() {
-        if let r = round { send(.end(round: r.id)) }
+        if var r = round {
+            send(.end(round: r.id))
+            if !r.entered.isEmpty { r.finished = true; addToHistory(r); summary = r }
+        }
         round = nil
         pending = [:]
         hole = 1
+    }
+
+    private func addToHistory(_ r: Round) {
+        history = Array(([r] + history.filter { $0.id != r.id }).sorted { $0.date > $1.date }.prefix(10))
     }
 
     private func send(_ kind: WatchEvent.Kind) {
@@ -102,7 +115,15 @@ final class WatchRound: NSObject, WCSessionDelegate {
     private func apply(_ snap: WatchSnapshot) {
         if snap.plans.count == 18 { plans = snap.plans }
         clubYards = snap.clubYards ?? ClubYards.defaults
-        if let r = round, snap.finishedIDs.contains(r.id) {
+        if let recent = snap.recent {
+            // The iPhone's list wins; keep rounds ended here that it hasn't seen yet.
+            let mine = history.filter { h in !recent.contains { $0.id == h.id } && h.date > (recent.first?.date ?? .distantPast) }
+            history = Array((recent + mine).sorted { $0.date > $1.date }.prefix(10))
+        }
+        if var r = round, snap.finishedIDs.contains(r.id) {
+            // Ended on the iPhone: show the scorecard here too.
+            r.finished = true
+            if !r.entered.isEmpty { if snap.recent == nil { addToHistory(r) }; summary = snap.recent?.first { $0.id == r.id } ?? r }
             round = nil; pending = [:]; hole = 1
             return
         }

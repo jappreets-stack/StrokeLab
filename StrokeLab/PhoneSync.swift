@@ -22,7 +22,9 @@ final class PhoneSync: NSObject, WCSessionDelegate {
         guard s.activationState == .activated, s.isPaired, s.isWatchAppInstalled else { return }
         let current = d.currentRoundID.flatMap { id in d.rounds.first { $0.id == id } }
         let finished = d.rounds.filter(\.finished).sorted { $0.date > $1.date }.prefix(5).map(\.id)
-        let snap = WatchSnapshot(round: current, plans: d.plans, finishedIDs: Array(finished), clubYards: d.clubYards)
+        let recent = d.rounds.filter { $0.finished && !$0.entered.isEmpty }.sorted { $0.date > $1.date }.prefix(10)
+        let snap = WatchSnapshot(round: current, plans: d.plans, finishedIDs: Array(finished), clubYards: d.clubYards,
+                                 recent: Array(recent))
         guard let raw = try? JSONEncoder.app.encode(snap) else { return }
         try? s.updateApplicationContext(["snapshot": raw])
     }

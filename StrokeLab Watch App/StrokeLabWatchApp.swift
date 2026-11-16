@@ -64,7 +64,10 @@ struct WatchHoleView: View {
 
     var body: some View {
         Group {
-            if rounds.round != nil { holeScreen } else { startScreen }
+            if rounds.round != nil { holeScreen } else { NavigationStack { startScreen } }
+        }
+        .sheet(item: Binding(get: { rounds.summary }, set: { rounds.summary = $0 })) { r in
+            WatchScorecard(round: r, done: { rounds.summary = nil })
         }
         .onAppear { gps.start(); keepWorkoutGoing() }
         .task(id: rounds.hole) { await WindModel.shared.refresh() }
@@ -90,6 +93,14 @@ struct WatchHoleView: View {
                     }
                     .buttonStyle(.borderedProminent).tint(.green)
                 }
+                if !rounds.history.isEmpty {
+                    NavigationLink {
+                        WatchPastRounds()
+                    } label: {
+                        Label("Past rounds", systemImage: "list.number").frame(maxWidth: .infinity, minHeight: 32)
+                    }
+                    .buttonStyle(.bordered)
+                }
                 Text(workout.error ?? "Starts a Golf workout in Apple Fitness and keeps yardages on screen. Shows up on your iPhone too.")
                     .font(.caption2).foregroundStyle(workout.error == nil ? Color.secondary : Color.orange)
                     .multilineTextAlignment(.center)
@@ -112,15 +123,12 @@ struct WatchHoleView: View {
 
     private var holeScreen: some View {
         VStack(spacing: 2) {
-            HStack {
-                Text("Hole \(hole)").font(.headline)
-                Spacer()
-                Text("Par \(h.par)").font(.headline).foregroundStyle(.green)
-            }
-            if !planLine.isEmpty {
-                Text(planLine).font(.caption2).foregroundStyle(.secondary)
-                    .lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity, alignment: .leading)
-            }
+            // Left side only: the clock sits top right.
+            Text("Hole \(hole)").font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+            (Text("Par \(h.par)").foregroundStyle(.green).bold()
+                + Text(planLine.isEmpty ? "" : " · " + planLine).foregroundStyle(.secondary))
+                .font(.caption2)
+                .lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
             Text(text(gps.yards(to: pins.center)))
                 .font(.system(size: 56, weight: .heavy, design: .rounded))
@@ -249,5 +257,88 @@ struct WatchScoreView: View {
                 }
             }
         }
+    }
+}
+
+/// Your last rounds, newest first. Tap one for its scorecard.
+struct WatchPastRounds: View {
+    private let rounds = WatchRound.shared
+    var body: some View {
+        List(rounds.history) { r in
+            NavigationLink {
+                WatchScorecard(round: r, done: nil)
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(r.date.formatted(.dateTime.month(.abbreviated).day())).font(.headline)
+                        Text(r.type.rawValue).font(.caption2).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("\(r.total)").font(.title3.weight(.bold)).monospacedDigit()
+                        Text(toParText(r.toPar) + (r.isComplete ? "" : " · \(r.entered.count)h"))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Past rounds")
+    }
+}
+
+/// Score, to par, putts and every hole. Shown when a round ends and from Past rounds.
+struct WatchScorecard: View {
+    let round: Round
+    let done: (() -> Void)?
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                Text(round.type.rawValue + " · " + round.date.formatted(.dateTime.month(.abbreviated).day()))
+                    .font(.caption2).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(round.total)").font(.system(size: 52, weight: .heavy, design: .rounded)).monospacedDigit()
+                    Text(toParText(round.toPar)).font(.title3.weight(.bold)).foregroundStyle(.green)
+                }
+                HStack {
+                    stat("\(round.putts)", "PUTTS")
+                    stat("\(round.entered.filter { $0.greenHit == true }.count)", "GREENS")
+                    stat("\(round.entered.count)", "HOLES")
+                }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3), spacing: 4) {
+                    ForEach(round.holes) { h in
+                        VStack(spacing: 0) {
+                            Text("\(h.hole) · P\(h.par)").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+                            Text(h.score.map { "\($0)" } ?? "–").font(.title3.weight(.bold)).monospacedDigit()
+                                .foregroundStyle(color(h))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .background(Color.gray.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+                if let done {
+                    Button(action: done) { Text("Done").frame(maxWidth: .infinity, minHeight: 34) }
+                        .buttonStyle(.borderedProminent).tint(.green)
+                }
+            }
+        }
+    }
+
+    private func color(_ h: HoleScore) -> Color {
+        guard let s = h.score else { return .secondary }
+        switch s - h.par {
+        case ..<0: return .green
+        case 0: return .white
+        case 1: return .orange
+        default: return .red
+        }
+    }
+
+    private func stat(_ v: String, _ label: String) -> some View {
+        VStack(spacing: 0) {
+            Text(v).font(.headline).monospacedDigit()
+            Text(label).font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
