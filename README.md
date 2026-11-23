@@ -8,7 +8,7 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 ## Features (Round 1 — iPhone)
 - **Course preloaded** — Redwood Empire GCC, White tees (par 72, 68.7 / 124): yards, par and stroke index for all 18 holes.
 - **Hole plan card** — tee club, target score, trouble side (OB / water / trees / bunker) and a note, shown at the top of every hole.
-- **One-hand hole entry** — score, putts and tee shot up front, everything else (penalties, lost ball, tee club, putt details) behind one "More" button.
+- **One-hand hole entry** — score, putts, tee shot, approach (distance + where it finished), chips before putting and shots inside 100 yds up front, everything else (penalties, lost ball, tee club, putt details) behind one "More" button.
   Tee club is pre-filled from the plan; greens in regulation and up-and-downs are worked out automatically (with override).
 - **Greens built in** — front / center / back of all 18 greens, computed from the course's OpenStreetMap outlines (green polygons + each hole's tee-to-green line), so GPS yardages work out of the box. You can still adjust any green by tapping the satellite map.
 - **Hole map** — each hole opens on its satellite view (like SwingU) with big front / center / back yards on top, turned to face the green from where you stand. Tap any spot for yards to it and what's left to the green (a layup planner).
@@ -29,7 +29,7 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 - Distances are scaled from your torso length in the video (≈19"), so they're estimates; the camera angle (down-the-line vs face-on) is detected from how wide your shoulders look.
 
 ### Apple Watch
-- Play a whole round without the phone: front / center / back yards from the watch's own GPS, the hole plan (club, target, trouble), and the same scoring buttons as the iPhone (score, putts, tee shot + how far off, first putt length / result / how far it finished, greenside bunker, penalties, lost ball, tee club), sized for gloves.
+- Play a whole round without the phone: front / center / back yards from the watch's own GPS, the hole plan (club, target, trouble), and the same scoring buttons as the iPhone (score, putts, tee shot + how far off, first putt length / result / how far it finished, greenside bunker, penalties, lost ball, tee club), sized for gloves. Approach, chips and shots inside 100 yds are entered on the iPhone.
 - Ending a round shows its scorecard (total, to par, putts, greens, every hole colored by score); Past rounds on the start screen keeps your last 10 (swipe or open one to delete it; deletes on the iPhone too).
 - Wind-adjusted club: current wind at the course (Open-Meteo, course coordinates only), split into into/helping/cross for the shot to the green, a plays-like yardage, and the club from your own carry distances.
 - Holes change with arrow buttons only (no Digital Crown, so a glove can't flip holes by accident).

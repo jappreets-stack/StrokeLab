@@ -58,6 +58,16 @@ nonisolated enum PuttResult: String, Codable, CaseIterable, Sendable {
     case made = "Made", short = "Short", long = "Long", left = "Left", right = "Right"
 }
 
+/// How far out the shot meant to reach the green was hit from (par 4s and 5s).
+nonisolated enum ApproachDistance: String, Codable, CaseIterable, Sendable {
+    case inside50 = "Inside 50", from50 = "50–100", from100 = "100–150", over150 = "150+"
+}
+
+/// Where that approach shot finished.
+nonisolated enum ApproachResult: String, Codable, CaseIterable, Sendable {
+    case green = "Green", short = "Short", long = "Long", left = "Left", right = "Right"
+}
+
 nonisolated enum UpDown: String, Codable, Sendable {
     case notAttempted, missed, made
 }
@@ -126,6 +136,10 @@ nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
     var firstPuttResult: PuttResult? // how the first putt finished
     var puttMiss: PuttMiss?         // how far it finished from the hole
     var sand: Bool?                 // were you in a greenside bunker
+    var approachDistance: ApproachDistance? // par 4/5: how far out the shot at the green was
+    var approachResult: ApproachResult?     // par 4/5: where it finished
+    var chips: Int?                 // chips or pitches before the putter (3 = 3 or more)
+    var inside100: Int?             // every shot from inside 100 yds until holed, putts included
     var prefilled: Bool?            // true until you change anything on this hole
     var id: Int { hole }
     var teeMissed: Bool { teeResult != nil && teeResult != .fairway && teeResult != .green }
