@@ -207,6 +207,12 @@ struct WatchScoreView: View {
                 if e.teeMissed {
                     row("HOW FAR OFF?", MissSize.allCases, \.label, e.missSize, cols: 3) { v in rounds.update { $0.missSize = v } }
                 }
+                if par > 3 {
+                    row("APPROACH FROM (YDS)", ApproachDistance.allCases, \.rawValue, e.approachDistance, cols: 2) { v in rounds.update { $0.approachDistance = v } }
+                    row("APPROACH FINISHED", ApproachResult.allCases, \.rawValue, e.approachResult, cols: 3) { v in rounds.update { $0.approachResult = v } }
+                }
+                row("CHIPS BEFORE PUTTING", [0, 1, 2, 3], { $0 == 3 ? "3+" : "\($0)" }, e.chips, cols: 4) { v in rounds.update { $0.chips = v } }
+                row("SHOTS INSIDE 100 (PUTTS COUNT)", Array(1...8), { "\($0)" }, e.inside100, cols: 4) { v in rounds.update { $0.inside100 = v } }
                 if (e.putts ?? 0) > 0 {
                     row("FIRST PUTT (FT)", PuttLength.allCases, \.rawValue, e.firstPutt, cols: 3) { v in rounds.update { $0.firstPutt = v } }
                     row("FIRST PUTT", PuttResult.allCases, \.rawValue, e.firstPuttResult ?? (e.putts == 1 ? .made : nil), cols: 3) { v in

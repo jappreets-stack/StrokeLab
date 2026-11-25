@@ -140,7 +140,7 @@ struct StatsView: View {
             .chartYAxis(.hidden).chartXAxis(.hidden)
             .chartLegend(.hidden)
             .frame(height: 26)
-            HStack(spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8, alignment: .leading)], alignment: .leading, spacing: 4) {
                 ForEach(Array(zip(StatsModel.mixNames, [Color.blue, Color.fairway, Color.gray, Color.orange, Color.red])), id: \.0) { name, color in
                     let n = s.mix.first { $0.name == name }?.count ?? 0
                     if n > 0 {
@@ -276,15 +276,15 @@ struct StatsView: View {
                             let made = rows.first { $0.result == "Made" }?.count ?? 0
                             HStack(spacing: 8) {
                                 Text(len).font(.callout.monospacedDigit()).frame(width: 74, alignment: .leading)
-                                HStack(spacing: 3) {
-                                    ForEach(rows) { r in
-                                        ForEach(0..<r.count, id: \.self) { _ in
-                                            RoundedRectangle(cornerRadius: 3).fill(Self.puttColor[r.result] ?? .gray)
-                                                .frame(width: 16, height: 16)
-                                        }
+                                // Wraps onto more lines as putts pile up, so the card never gets wider than the screen.
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 14, maximum: 14), spacing: 3)], alignment: .leading, spacing: 3) {
+                                    let squares = rows.flatMap { r in Array(repeating: r.result, count: r.count) }
+                                    ForEach(Array(squares.enumerated()), id: \.offset) { _, result in
+                                        RoundedRectangle(cornerRadius: 3).fill(Self.puttColor[result] ?? .gray)
+                                            .frame(width: 14, height: 14)
                                     }
                                 }
-                                Spacer()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 Text("\(made)/\(total) made").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             }
                         }

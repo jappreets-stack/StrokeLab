@@ -100,6 +100,8 @@ final class Store {
                 h.teeResult = e.teeResult; h.missSize = e.missSize
                 h.penalties = e.penalties; h.lostBall = e.lostBall; h.sand = e.sand
                 h.firstPutt = e.firstPutt; h.firstPuttResult = e.firstPuttResult; h.puttMiss = e.puttMiss
+                h.approachDistance = e.approachDistance; h.approachResult = e.approachResult
+                h.chips = e.chips; h.inside100 = e.inside100
                 data.rounds[ri].holes[hi] = h
             } else {
                 data.rounds[ri].holes.append(e)
