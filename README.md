@@ -29,7 +29,7 @@ The goal is simple: find out exactly where strokes go, with entry fast enough to
 - Distances are scaled from your torso length in the video (≈19"), so they're estimates; the camera angle (down-the-line vs face-on) is detected from how wide your shoulders look.
 
 ### Apple Watch
-- Play a whole round without the phone: front / center / back yards from the watch's own GPS, the hole plan (club, target, trouble), and the same scoring buttons as the iPhone (score, putts, tee shot + how far off, first putt length / result / how far it finished, greenside bunker, penalties, lost ball, tee club), sized for gloves. Approach, chips and shots inside 100 yds are entered on the iPhone.
+- Play a whole round without the phone: front / center / back yards from the watch's own GPS, the hole plan (club, target, trouble), and the same scoring buttons as the iPhone (score, putts, tee shot + how far off, approach distance and where it finished, chips before putting, shots inside 100 yds, first putt length / result / how far it finished, greenside bunker, penalties, lost ball, tee club), sized for gloves.
 - Ending a round shows its scorecard (total, to par, putts, greens, every hole colored by score); Past rounds on the start screen keeps your last 10 (swipe or open one to delete it; deletes on the iPhone too).
 - Wind-adjusted club: current wind at the course (Open-Meteo, course coordinates only), split into into/helping/cross for the shot to the green, a plays-like yardage, and the club from your own carry distances.
 - Holes change with arrow buttons only (no Digital Crown, so a glove can't flip holes by accident).
