@@ -139,7 +139,6 @@ nonisolated struct HoleScore: Codable, Sendable, Identifiable, Equatable {
     var approachDistance: ApproachDistance? // par 4/5: how far out the shot at the green was
     var approachResult: ApproachResult?     // par 4/5: where it finished
     var chips: Int?                 // chips or pitches before the putter (3 = 3 or more)
-    var inside100: Int?             // every shot from inside 100 yds until holed, putts included
     var prefilled: Bool?            // true until you change anything on this hole
     var id: Int { hole }
     var teeMissed: Bool { teeResult != nil && teeResult != .fairway && teeResult != .green }

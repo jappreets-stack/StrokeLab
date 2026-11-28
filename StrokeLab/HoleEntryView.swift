@@ -180,16 +180,14 @@ private struct HoleForm: View {
                               value: s.missSize, columns: 3, height: 48)
                 }
                 if hole.par > 3 {
-                    ChoiceRow(label: "Approach from", hint: "(yds, the shot at the green)",
+                    ChoiceRow(label: hole.par == 5 ? "3rd shot from" : "2nd shot from", hint: "(yds)",
                               options: ApproachDistance.allCases, title: \.rawValue,
                               value: s.approachDistance, columns: 4, height: 48)
-                    ChoiceRow(label: "Approach finished", options: ApproachResult.allCases, title: \.rawValue,
+                    ChoiceRow(label: hole.par == 5 ? "3rd shot finished" : "2nd shot finished", options: ApproachResult.allCases, title: \.rawValue,
                               value: s.approachResult, columns: 5, height: 48)
                 }
                 ChoiceRow(label: "Chips before putting", options: [0, 1, 2, 3],
                           title: { $0 == 3 ? "3+" : "\($0)" }, value: s.chips, columns: 4, height: 48)
-                ChoiceRow(label: "Shots inside 100 yds", hint: "(putts count)", options: Array(1...8),
-                          title: { "\($0)" }, value: s.inside100, columns: 8, height: 48)
 
                 Button { withAnimation { showMore.toggle() } } label: {
                     HStack {
